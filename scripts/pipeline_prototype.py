@@ -17,73 +17,44 @@ TODO:
     - Refactor combiners into ca/combiners/
     - Add configuration-driven execution
 """
-
-from typing import List
 import json
 import os
 
-from pydantic import BaseModel, Field
 from google import genai
 from dotenv import load_dotenv
 
-
+from ca.extractors.base import HypothesisExtractor
+from ca.extractors.registry import ExtractorRegistry
 
 MODEL = "gemini-2.5-flash"
 
 # System Prompt for Hypothesis Extraction
-SYSTEM_PROMPT = """You are a helpful assistant that takes in language model outputs and treat them as evidence that the language model is trying to solve and finally generates a hypothesis with a confidence score in the range [0-1].
-Your output should have the following 3 items:
+SYSTEM_PROMPT = "Hi LLM, i " \
+"have given you three natural langauge inputs. We are trying to solve a problem using Dempster Shafer theory. I need you to look at these inputs from these different sources and come up with a single universe of discourse. The challenge is, each source only provides a fractional piece of the universe of discourse. Can you please do that for this example"
 
-1. statement: Your best guess of the hypothesis statement implied by the language model output.
-2. confidence: A float number between 0 and 1 representing your confidence in the hypothesis.
-3. rationale: A brief explanation of why you assigned that confidence score.
-
-Here is the language model output you need to analyze:
-"""
-
-
-class Hypothesis(BaseModel):
-    """Represents a hypothesis with associated confidence."""
-    statement: str = Field(..., description="The hypothesis statement.")
-    confidence: float = Field(..., description="Confidence score between 0 and 1.")
-    rationale: str = Field(..., description="Rationale for the confidence score.")
-
-
-class LlmHypothesisExtractor:
+@ExtractorRegistry.register("llm_hypothesis_extractor")
+class LlmHypothesisExtractor(HypothesisExtractor):
     """Prototype LLM-based hypothesis extractor."""
 
     system_prompt = SYSTEM_PROMPT
 
-    def __init__(self, language_model, inputs: List[str]):
-        self.inputs = inputs
+    def __init__(self, language_model):
         self.language_model = language_model
 
-    def extract_hypothesis(self, input):
+    def create_uod(self, inputs):
+        """Create universe of discourse from input using LLM."""
+
         # Instantiate the language model (google)
         client = genai.Client()
-        prompt = self.system_prompt + input
+        prompt = self.system_prompt + ", Here are the inputs: " + "\n".join(inputs)
 
         breakpoint()
         response = client.models.generate_content(
             model=MODEL,
             contents=prompt,
-            config={
-                "response_mime_type": "application/json",
-                "response_json_schema": Hypothesis.model_json_schema(),
-            },
         )
 
-        breakpoint()
-        return Hypothesis.model_validate_json(response.text)
-
-    def run(self):
-        self.hypotheses: List[Hypothesis] = []
-        for input_text in self.inputs:
-            hypothesis = self.extract_hypothesis(input=input_text)
-            self.hypotheses.append(hypothesis)
-
-    def get_hypotheses(self) -> List[Hypothesis]:
-        return self.hypotheses
+        return response.text
 
 
 def main():
@@ -108,19 +79,10 @@ def main():
     inputs = [model_A_output, model_B_output, model_C_output]
 
     # Initialize and run the hypothesis extractor
-    extractor = LlmHypothesisExtractor(language_model=MODEL, inputs=inputs)
-    extractor.run()
+    extractor = LlmHypothesisExtractor(language_model=MODEL)
 
-    # Retrieve and print hypotheses
-    hypotheses = extractor.get_hypotheses()
-
-    # Print the extracted hypotheses
-    for idx, hypothesis in enumerate(hypotheses):
-        print(f"Hypothesis {idx + 1}:")
-        print(f"Statement: {hypothesis.statement}")
-        print(f"Confidence: {hypothesis.confidence}")
-        print(f"Rationale: {hypothesis.rationale}")
-        print("-" * 40)
+    uod = extractor.create_uod(inputs=inputs)
+    print("Universe of Discourse (UoD):", uod)
 
 if __name__ == "__main__":
     main()

@@ -4,5 +4,6 @@ class HypothesisExtractor(ABC):
     """Base class for Hypothesis Extractors."""
 
     @abstractmethod
-    def extract(self, text: str):
+    def create_uod(self, inputs):
+        """Create universe of discourse from input."""
         pass
