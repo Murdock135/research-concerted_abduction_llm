@@ -1,3 +1,7 @@
+PATIENT INPUT TO LMs:
+
+I've been having this dull headache for about two weeks now, mostly in the front of my head. It gets worse when I'm at work staring at my computer. I also noticed my vision gets a bit blurry by the end of the day, and sometimes I feel a bit dizzy when I stand up quickly. I've been drinking more coffee lately because I'm tired all the time. No fever or anything like that.
+
 LM RESPONSES:
 
 Model1:
