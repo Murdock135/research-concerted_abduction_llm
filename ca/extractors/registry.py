@@ -4,6 +4,7 @@ from ca.extractors.base import HypothesisExtractor
 class ExtractorRegistry:
     """
     ExtractorRegistry is the object that allows registering HypothesisExtractor objects, getting them and listing available ones.
+    The list of Extractors are contained in a dict with the format {name: ExtractorObject}
     """
     _extractors: Dict[str, Type[HypothesisExtractor]] = {} 
 
@@ -24,6 +25,7 @@ class ExtractorRegistry:
 
     @classmethod
     def get(cls, name: str):
+        """Get a registered extractor by name."""
         if name not in cls._extractors:
             raise ValueError(f"Unknown extractor: {name}. Available extractors: {cls.list_extractors()}")
         
@@ -31,6 +33,5 @@ class ExtractorRegistry:
 
     @classmethod
     def list_extractors(cls):
-        return list(cls._extractors.keys())
-
-
+        """Get the registered extractors."""
+        return f"Extractors:\n{[f'{extractor}\n' for extractor in cls._extractors.keys()]}"        
