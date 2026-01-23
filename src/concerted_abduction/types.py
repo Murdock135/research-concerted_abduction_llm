@@ -1,6 +1,11 @@
 from pydantic import BaseModel, Field
 
 import pandas as pd
+import numpy as np
+import numpy.typing as npt
+
+# Type alias for overlap matrix representing the similarity/overlap between model outputs
+OverlapMatrix = npt.NDArray[np.int32]
 
 class ModelOutput(BaseModel):
     model_name: str = Field(..., description="Name of the model that generated this output")

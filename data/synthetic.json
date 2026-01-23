@@ -1,30 +1,23 @@
 {
-  "scenario_id": "SYN-001",
-  "created": "2025-11-24",
-  "description": "Synthetic patient-LLM interaction for hypothesis extraction and combination testing",
-  
-  "patient_input": {
-    "text": "I've been having this dull headache for about two weeks now, mostly in the front of my head. It gets worse when I'm at work staring at my computer. I also noticed my vision gets a bit blurry by the end of the day, and sometimes I feel a bit dizzy when I stand up quickly. I've been drinking more coffee lately because I'm tired all the time. No fever or anything like that.",
-    "metadata": {
-      "age": 34,
-      "sex": "female"
+  "samples": [
+    {
+      "id": "1",
+      "created_at": "2025-11-24",
+      "input_message": "I've been having this dull headache for about two weeks now, mostly in the front of my head. It gets worse when I'm at work staring at my computer. I also noticed my vision gets a bit blurry by the end of the day, and sometimes I feel a bit dizzy when I stand up quickly. I've been drinking more coffee lately because I'm tired all the time. No fever or anything like that.",
+      "outputs": [
+        {
+          "model_name": "ClinicalAssist-7B",
+          "response": "Based on your symptoms, here are some possibilities to discuss with your healthcare provider:\n\n1. Digital eye strain (Computer Vision Syndrome): Your prolonged computer use combined with end-of-day blurry vision and frontal headaches strongly suggests this condition.\n\n2. Tension-type headache: The dull, frontal location and work-related exacerbation pattern is characteristic.\n\n3. Caffeine-related effects: Increased coffee consumption can contribute to both headaches and sleep disturbances, creating a cycle of fatigue.\n\n4. Orthostatic hypotension: The dizziness upon standing may indicate blood pressure changes, possibly related to dehydration from caffeine intake.\n\n5. Refractive error: Undiagnosed or changed vision prescription could explain both headaches and blurry vision.\n\nRecommended: Eye examination, blood pressure monitoring, and hydration assessment."
+        },
+        {
+          "model_name": "MedChat-13B",
+          "response": "I understand you're experiencing several concerning symptoms. Let me help you think through what might be happening.\n\nThe combination of frontal headaches worsening with screen use and blurry vision at day's end points toward eye strain from computer work. This is very common and often called Computer Vision Syndrome.\n\nYour fatigue and increased coffee intake might be connected—you could be in a cycle where poor sleep leads to caffeine use, which then disrupts sleep further. The dizziness when standing could be from not drinking enough water, especially if coffee is replacing other fluids.\n\nIt would be worth getting your eyes checked and monitoring your hydration. The absence of fever is reassuring that this likely isn't an infection."
+        },
+        {
+          "model_name": "DiagnosisGPT-70B",
+          "response": "ASSESSMENT SUMMARY\n\nPrimary hypothesis: Asthenopia secondary to prolonged visual display terminal use with concurrent tension-type cephalalgia.\n\nSupporting evidence:\n- Temporal pattern: 2-week duration, occupational exacerbation\n- Symptom cluster: frontal headache + visual disturbance + fatigue\n- Negative indicators: afebrile, no focal neurological symptoms reported\n\nSecondary considerations:\n- Caffeine use disorder, mild: increased consumption with tolerance/dependence cycle contributing to fatigue\n- Orthostatic intolerance: positional dizziness warrants BP evaluation\n- Uncorrected ametropia: cannot exclude without ophthalmologic examination\n\nDifferential exclusions to consider:\n- Intracranial mass lesion: low probability given symptom pattern, but persistent symptoms warrant imaging if no improvement\n- Idiopathic intracranial hypertension: less likely without papilledema, but consider if visual symptoms progress\n\nACTION ITEMS:\n1. Comprehensive eye examination\n2. Orthostatic vital signs\n3. Sleep hygiene and caffeine reduction counseling\n4. Follow-up in 2-4 weeks; neuroimaging if symptoms persist or worsen"
+        }
+      ]
     }
-  },
-
-  "llm_outputs": {
-    "model_A": {
-      "model_name": "ClinicalAssist-7B",
-      "response": "Based on your symptoms, here are some possibilities to discuss with your healthcare provider:\n\n1. Digital eye strain (Computer Vision Syndrome): Your prolonged computer use combined with end-of-day blurry vision and frontal headaches strongly suggests this condition.\n\n2. Tension-type headache: The dull, frontal location and work-related exacerbation pattern is characteristic.\n\n3. Caffeine-related effects: Increased coffee consumption can contribute to both headaches and sleep disturbances, creating a cycle of fatigue.\n\n4. Orthostatic hypotension: The dizziness upon standing may indicate blood pressure changes, possibly related to dehydration from caffeine intake.\n\n5. Refractive error: Undiagnosed or changed vision prescription could explain both headaches and blurry vision.\n\nRecommended: Eye examination, blood pressure monitoring, and hydration assessment."
-    },
-
-    "model_B": {
-      "model_name": "MedChat-13B",
-      "response": "I understand you're experiencing several concerning symptoms. Let me help you think through what might be happening.\n\nThe combination of frontal headaches worsening with screen use and blurry vision at day's end points toward eye strain from computer work. This is very common and often called Computer Vision Syndrome.\n\nYour fatigue and increased coffee intake might be connected—you could be in a cycle where poor sleep leads to caffeine use, which then disrupts sleep further. The dizziness when standing could be from not drinking enough water, especially if coffee is replacing other fluids.\n\nIt would be worth getting your eyes checked and monitoring your hydration. The absence of fever is reassuring that this likely isn't an infection."
-    },
-
-    "model_C": {
-      "model_name": "DiagnosisGPT-70B",
-      "response": "ASSESSMENT SUMMARY\n\nPrimary hypothesis: Asthenopia secondary to prolonged visual display terminal use with concurrent tension-type cephalalgia.\n\nSupporting evidence:\n- Temporal pattern: 2-week duration, occupational exacerbation\n- Symptom cluster: frontal headache + visual disturbance + fatigue\n- Negative indicators: afebrile, no focal neurological symptoms reported\n\nSecondary considerations:\n- Caffeine use disorder, mild: increased consumption with tolerance/dependence cycle contributing to fatigue\n- Orthostatic intolerance: positional dizziness warrants BP evaluation\n- Uncorrected ametropia: cannot exclude without ophthalmologic examination\n\nDifferential exclusions to consider:\n- Intracranial mass lesion: low probability given symptom pattern, but persistent symptoms warrant imaging if no improvement\n- Idiopathic intracranial hypertension: less likely without papilledema, but consider if visual symptoms progress\n\nACTION ITEMS:\n1. Comprehensive eye examination\n2. Orthostatic vital signs\n3. Sleep hygiene and caffeine reduction counseling\n4. Follow-up in 2-4 weeks; neuroimaging if symptoms persist or worsen"
-    }
-  }
+  ]
 }
