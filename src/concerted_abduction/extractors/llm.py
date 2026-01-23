@@ -5,9 +5,18 @@ from google import genai
 
 @ExtractorRegistry.register("llm_hypothesis_extractor")
 class LlmHypothesisExtractor(HypothesisExtractor):
-    """Prototype LLM-based hypothesis extractor."""
+    """
+    LLM-based hypothesis extractor for generating universe of discourse.
+    
+    This extractor uses a language model to analyze multiple inputs and 
+    generate hypotheses for abductive reasoning. The system prompt can be 
+    customized to guide the LLM's output format and reasoning approach.
+    
+    Attributes:
+        language_model: The name/identifier of the language model to use
+        system_prompt: The instruction prompt sent to the LLM
+    """
 
-    # TODO: Load prompt from external file
     system_prompt = ""
 
     def __init__(self, language_model):
@@ -27,5 +36,7 @@ class LlmHypothesisExtractor(HypothesisExtractor):
 
         return response.text
     
-
-
+    @classmethod
+    def set_system_prompt(cls, prompt: str):
+        """Set the system prompt for the LLM."""
+        cls.system_prompt = prompt

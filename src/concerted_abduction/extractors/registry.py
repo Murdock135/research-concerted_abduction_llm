@@ -1,5 +1,7 @@
-from typing import Dict, Type
+from typing import Dict, Type, TypeVar
 from concerted_abduction.extractors.base import HypothesisExtractor
+
+T = TypeVar('T', bound=HypothesisExtractor)
 
 class ExtractorRegistry:
     """
@@ -13,7 +15,7 @@ class ExtractorRegistry:
         """
         Register an extractor.
         """
-        def wrapper(extractor_cls: Type[HypothesisExtractor]) -> Type[HypothesisExtractor]:
+        def wrapper(extractor_cls: Type[T]) -> Type[T]:
             # fail if an object of type HypothesisExtractor has not been supplied
             if not issubclass(extractor_cls, HypothesisExtractor):
                 raise TypeError(f"{extractor_cls.__name__} must inherit from HypothesisExtractor")
