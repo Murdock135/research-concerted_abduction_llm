@@ -31,6 +31,21 @@ MODEL = "gemini-2.5-flash"
 SYSTEM_PROMPT = "Hi LLM, i " \
 "have given you three natural langauge inputs. We are trying to solve a problem using Dempster Shafer theory. I need you to look at these inputs from these different sources and come up with a single universe of discourse. The challenge is, each source only provides a fractional piece of the universe of discourse. Can you please do that for this example"
 
+def load_data(path: str):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+    
+def extract_uods(sample: dict):
+    extractor = LlmHypothesisExtractor(language_model=MODEL)
+    extractor.set_system_prompt(SYSTEM_PROMPT)
+
+def save_hypotheses(sample_id: str, uod: dict, output_dir: str = "results"):
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, f"{sample_id}_uod.json")
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(uod, f, ensure_ascii=False, indent=4)
+    print(f"Saved UoD for sample {sample_id} to {output_path}")
+
 def main():
     """Main execution function for the pipeline prototype."""
     env_path = "~/.secrets/.llm_apis"
@@ -41,23 +56,14 @@ def main():
     
     if not os.getenv("GEMINI_API_KEY"):
         raise EnvironmentError("GEMINI_API_KEY not found in environment variables.")
-        
-    # Get llm outputs
-    data_path = "data/synthetic.json"
-    with open(data_path, "r") as f:
-        data = json.load(f)
+    
+    data_path = "data/generated_dataset.json"
+    dataset = load_data(data_path)
+    print("Loaded dataset:\n", dataset)
 
-    model_A_output = data["llm_outputs"]["model_A"]["response"]
-    model_B_output = data["llm_outputs"]["model_B"]["response"]
-    model_C_output = data["llm_outputs"]["model_C"]["response"]
-    inputs = [model_A_output, model_B_output, model_C_output]
-
-    # Initialize and run the hypothesis extractor
-    extractor = LlmHypothesisExtractor(language_model=MODEL)
-    extractor.set_system_prompt(SYSTEM_PROMPT)
-
-    uod = extractor.create_uod(inputs=inputs)
-    print("Universe of Discourse (UoD):\n", uod)
+    for sample in dataset['samples']:
+        print(sample)
+        breakpoint()
 
 if __name__ == "__main__":
     main()
