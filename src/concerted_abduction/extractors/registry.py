@@ -1,5 +1,5 @@
 from typing import Dict, Type
-from ca.extractors.base import HypothesisExtractor
+from concerted_abduction.extractors.base import HypothesisExtractor
 
 class ExtractorRegistry:
     """

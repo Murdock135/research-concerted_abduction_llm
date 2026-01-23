@@ -23,8 +23,8 @@ import os
 from google import genai
 from dotenv import load_dotenv
 
-from ca.extractors.base import HypothesisExtractor
-from ca.extractors.registry import ExtractorRegistry
+from concerted_abduction.extractors.llm import HypothesisExtractor
+from concerted_abduction.extractors.registry import ExtractorRegistry
 
 MODEL = "gemini-2.5-flash"
 
