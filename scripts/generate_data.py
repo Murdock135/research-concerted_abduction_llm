@@ -5,7 +5,7 @@ import os
 from google import genai
 from dotenv import load_dotenv
 
-from concerted_abduction.data_generator.data_generator import DataGenerator
+from concerted_abduction.data_utils.data_generator import DataGenerator
 from concerted_abduction.utils.utils import find_project_root
 
 MODEL = "gemini-2.5-flash"
