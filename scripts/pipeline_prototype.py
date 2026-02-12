@@ -1,6 +1,9 @@
 """Monolithic prototype implementing the full Concerted Abduction pipeline.
 
-This file contains a single-file implementation of:
+Current state:
+- Loads a generated dataset from a JSON file
+
+This file will contain a single-file implementation of:
 - Hypothesis extraction (LLM-based)
 - Mass function assignment (confidence-based)
 - Evidence combination (Dempster's rule)
@@ -31,6 +34,8 @@ MODEL = "gemini-2.5-flash"
 SYSTEM_PROMPT = "Hi LLM, i " \
 "have given you three natural langauge inputs. We are trying to solve a problem using Dempster Shafer theory. I need you to look at these inputs from these different sources and come up with a single universe of discourse. The challenge is, each source only provides a fractional piece of the universe of discourse. Can you please do that for this example"
 
+# -------------------------------------------------------------------
+# Helpers
 def load_data(path: str):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -45,6 +50,7 @@ def save_hypotheses(sample_id: str, uod: dict, output_dir: str = "results"):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(uod, f, ensure_ascii=False, indent=4)
     print(f"Saved UoD for sample {sample_id} to {output_path}")
+# -------------------------------------------------------------------
 
 def main():
     """Main execution function for the pipeline prototype."""
