@@ -1,0 +1,12 @@
+
+- [ ] Rename the current data generator to common_input_generator
+- [ ] Put prompt for data generator in prompts/data_generators/common_input_generator/v0.txt
+- [ ] Restructure the data/ directory
+    - [ ] Keep synthetic.json in examples/common_input_generator/v0.json
+- [ ] Create a helper function to load prompt
+- [ ] Create a helper function to load env variables
+- [ ] Use a config.toml file to configure
+    - prompts for each component
+    - example files for each component
+    - LLM for each component
+    - output directories

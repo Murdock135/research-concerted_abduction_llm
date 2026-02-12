@@ -1,4 +1,6 @@
-
+'''
+Generate synthetic data for the concerted abduction project using a language model. This script initializes the data generator, creates a prompt for generating data, and saves the generated dataset to a JSON file.
+'''
 import json
 import os
 
@@ -11,7 +13,6 @@ from concerted_abduction.utils.utils import find_project_root
 MODEL = "gemini-2.5-flash"
 
 def main():
-    """Main execution function for the pipeline prototype."""
     env_path = "~/.secrets/.llm_apis"
     load_dotenv(dotenv_path=os.path.expanduser(env_path))
 
