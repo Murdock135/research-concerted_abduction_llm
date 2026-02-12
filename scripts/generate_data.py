@@ -7,7 +7,7 @@ import os
 from google import genai
 from dotenv import load_dotenv
 
-from concerted_abduction.data_utils.data_generator import DataGenerator
+from concerted_abduction.data_utils.data_generator import CommonInputDataGenerator
 from concerted_abduction.utils.utils import find_project_root
 
 MODEL = "gemini-2.5-flash"
@@ -23,7 +23,7 @@ def main():
         raise EnvironmentError("GEMINI_API_KEY not found in environment variables.")
         
     # Initialize the data generator
-    generator = DataGenerator(language_model=MODEL)
+    generator = CommonInputDataGenerator(language_model=MODEL)
 
     # Example prompt for generating data
     prompt = "Generate 5 data samples in a medical diagnosis scenario for 3 models with the following overlap matrix: [[1.0, 0.5, 0.2], [0.5, 1.0, 0.3], [0.2, 0.3, 1.0]]"

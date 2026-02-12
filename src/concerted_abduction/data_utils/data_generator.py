@@ -1,5 +1,5 @@
 from concerted_abduction.types import DataSet
-from concerted_abduction.utils.utils import find_project_root
+from concerted_abduction.utils.utils import find_project_root, load_prompt
 
 from typing import Optional
 from pathlib import Path
@@ -9,45 +9,15 @@ import numpy as np
 from google import genai
 from google.genai import types
 
-"""
-TODO:
-1. Load system_prompt from a file dynamically.
-2. Get examples
-"""
-EXAMPLES_PATH = find_project_root(__file__) / "data" / "synthetic.json"
-class DataGenerator:
+DEFAULT_EXAMPLES_PATH = find_project_root(__file__) / "data" / "synthetic" / "examples" / "common_input" / "v0.json"
+DEFAULT_SYSTEM_PROMPT_PATH = find_project_root(__file__) / "prompts" / "data_generators" / "common_input" / "v0.txt"
+class CommonInputDataGenerator():
 
-    system_prompt = """You are a helpful assistant that generates natural language data samples for training machine learning models.
-
-    The intended dataset is meant to be used in a Belief-Theory setting (Dempster-Shafer theory). Thus, 
-    each sample should be a synthetic representation of an interaction between a human and multiple
-    language models.
-
-    Nature of each sample:
-    The human provides an input message that implies a mystery or an uncertain situation that the language models need to reason about. 
-    For example, it could be a medical diagnosis or differential diagnosis scenario (Example provided at the end). Then, 
-    each language model provides a response to the input message, which may include different hypotheses or interpretations of the situation.
-    Each language model's response should have some overlap in their hypotheses but may also contain unique elements or interpretations to reflect different reasoning paths.
-
-    You will be provided a scenario description for each sample and an overlap matrix that specifies the degree of overlap of evidence between the outputs of different models for that scenario.
-    
-    Each sample should be a dictionary with the following keys:
-    - id (str): A unique identifier
-    - created_at (str): The creation timestamp of the sample. Format: YYYY-MM-DDTHH:MM:SSZ
-    - input_message (str): The input text for the model to process
-    - outputs (list[dict]): A list of model responses, each containing:
-        - model_name (str): The name of the language model
-        - response (str): The model's response to the input_message
-
-    You will be provided an overlap matrix representing the similarity or overlap between the outputs of different models for the same input message. 
-    The overlap matrix is a square matrix of size `n_models x n_models`, where each entry `(i, j)` indicates the degree of overlap between the outputs of model `i` and model `j`.
-
-    Example:
-    """
+    system_prompt = load_prompt(DEFAULT_SYSTEM_PROMPT_PATH)
 
     def __init__(self, language_model, system_prompt: Optional[str] = None) -> None:
         self.language_model = language_model
-        self._set_example_path(EXAMPLES_PATH)
+        self._set_example_path(DEFAULT_EXAMPLES_PATH)
         self.examples = self._get_examples()
         self.system_prompt = system_prompt if system_prompt is not None else self.__class__.system_prompt
 
