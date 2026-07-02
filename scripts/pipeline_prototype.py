@@ -22,29 +22,27 @@ TODO:
 """
 import json
 import os
+from pathlib import Path
 
-from google import genai
-from dotenv import load_dotenv
-
-from concerted_abduction.extractors.llm import LlmHypothesisExtractor
-
-MODEL = "gemini-2.5-flash"
-
-# System Prompt for Hypothesis Extraction
-SYSTEM_PROMPT = "Hi LLM, i " \
-"have given you three natural langauge inputs. We are trying to solve a problem using Dempster Shafer theory. I need you to look at these inputs from these different sources and come up with a single universe of discourse. The challenge is, each source only provides a fractional piece of the universe of discourse. Can you please do that for this example"
+from concerted_abduction.extractors import ExtractorRegistry
+from concerted_abduction.utils.utils import load_prompt
+from config.settings import ENVSettings, ConcertedAbductionSettings
 
 # -------------------------------------------------------------------
 # Helpers
 def load_data(path: str):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-    
-def extract_uods(sample: dict):
-    extractor = LlmHypothesisExtractor(language_model=MODEL)
-    extractor.set_system_prompt(SYSTEM_PROMPT)
 
-def save_hypotheses(sample_id: str, uod: dict, output_dir: str = "results"):
+def extract_uods(sample: dict, cfg):
+    extractor_cls = ExtractorRegistry.get(cfg.type)
+    extractor = extractor_cls(language_model=cfg.llm.model_name)
+    extractor.set_system_prompt(load_prompt(cfg.prompt_path))
+
+    inputs = [output["response"] for output in sample["outputs"]]
+    return extractor.create_uod(inputs)
+
+def save_hypotheses(sample_id: str, uod: dict, output_dir: str | Path = "results"):
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, f"{sample_id}_uod.json")
     with open(output_path, "w", encoding="utf-8") as f:
@@ -54,22 +52,22 @@ def save_hypotheses(sample_id: str, uod: dict, output_dir: str = "results"):
 
 def main():
     """Main execution function for the pipeline prototype."""
-    env_path = "~/.secrets/.llm_apis"
-    load_dotenv(dotenv_path=os.path.expanduser(env_path))
-
-    print("ENVIRONEMENT VARIABLES:")
-    print("GEMINI_API_KEY =", os.getenv("GEMINI_API_KEY"))
-    
-    if not os.getenv("GEMINI_API_KEY"):
+    env = ENVSettings()
+    if not env.gemini_api_key:
         raise EnvironmentError("GEMINI_API_KEY not found in environment variables.")
-    
-    data_path = "data/generated_dataset.json"
+
+    settings = ConcertedAbductionSettings()
+    extractor_cfg = settings.hypothesis_extractor
+    if extractor_cfg.llm is None:
+        raise ValueError(f"hypothesis_extractor config of type '{extractor_cfg.type}' requires an 'llm' section")
+
+    data_path = settings.data_generator.output_dir / "generated_dataset.json"
     dataset = load_data(data_path)
     print("Loaded dataset:\n", dataset)
 
     for sample in dataset['samples']:
-        print(sample)
-        breakpoint()
+        uod = extract_uods(sample, extractor_cfg)
+        save_hypotheses(sample['scenario_id'], {"uod": uod}, output_dir=extractor_cfg.output_dir)
 
 if __name__ == "__main__":
     main()

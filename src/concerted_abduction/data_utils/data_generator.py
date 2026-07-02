@@ -1,5 +1,7 @@
 from concerted_abduction.types import DataSet
 from concerted_abduction.utils.utils import find_project_root, load_prompt
+from concerted_abduction.data_utils.base import DataGenerator
+from concerted_abduction.data_utils.registry import DataGeneratorRegistry
 
 from typing import Optional
 from pathlib import Path
@@ -11,13 +13,15 @@ from google.genai import types
 
 DEFAULT_EXAMPLES_PATH = find_project_root(__file__) / "data" / "synthetic" / "examples" / "common_input" / "v0.json"
 DEFAULT_SYSTEM_PROMPT_PATH = find_project_root(__file__) / "prompts" / "data_generators" / "common_input" / "v0.txt"
-class CommonInputDataGenerator():
+
+@DataGeneratorRegistry.register("common_input")
+class CommonInputDataGenerator(DataGenerator):
 
     system_prompt = load_prompt(DEFAULT_SYSTEM_PROMPT_PATH)
 
-    def __init__(self, language_model, system_prompt: Optional[str] = None) -> None:
+    def __init__(self, language_model, system_prompt: Optional[str] = None, examples_path: Optional[str | Path] = None) -> None:
         self.language_model = language_model
-        self._set_example_path(DEFAULT_EXAMPLES_PATH)
+        self._set_example_path(examples_path if examples_path is not None else DEFAULT_EXAMPLES_PATH)
         self.examples = self._get_examples()
         self.system_prompt = system_prompt if system_prompt is not None else self.__class__.system_prompt
 

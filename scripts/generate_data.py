@@ -2,28 +2,25 @@
 Generate synthetic data for the concerted abduction project using a language model. This script initializes the data generator, creates a prompt for generating data, and saves the generated dataset to a JSON file.
 '''
 import json
-import os
 
-from google import genai
-from dotenv import load_dotenv
-
-from concerted_abduction.data_utils.data_generator import CommonInputDataGenerator
-from concerted_abduction.utils.utils import find_project_root
-
-MODEL = "gemini-2.5-flash"
+from concerted_abduction.data_utils import DataGeneratorRegistry
+from config.settings import ENVSettings, ConcertedAbductionSettings
 
 def main():
-    env_path = "~/.secrets/.llm_apis"
-    load_dotenv(dotenv_path=os.path.expanduser(env_path))
-
-    print("ENVIRONEMENT VARIABLES:")
-    print("GEMINI_API_KEY =", os.getenv("GEMINI_API_KEY"))
-    
-    if not os.getenv("GEMINI_API_KEY"):
+    env = ENVSettings()
+    if not env.gemini_api_key:
         raise EnvironmentError("GEMINI_API_KEY not found in environment variables.")
-        
-    # Initialize the data generator
-    generator = CommonInputDataGenerator(language_model=MODEL)
+
+    cfg = ConcertedAbductionSettings().data_generator
+    if cfg.llm is None:
+        raise ValueError(f"data_generator config of type '{cfg.type}' requires an 'llm' section")
+
+    # Initialize the data generator configured for this run
+    generator_cls = DataGeneratorRegistry.get(cfg.type)
+    generator = generator_cls(
+        language_model=cfg.llm.model_name,
+        examples_path=cfg.examples_path,
+    )
 
     # Example prompt for generating data
     prompt = "Generate 5 data samples in a medical diagnosis scenario for 3 models with the following overlap matrix: [[1.0, 0.5, 0.2], [0.5, 1.0, 0.3], [0.2, 0.3, 1.0]]"
@@ -31,7 +28,8 @@ def main():
     print("Generated Dataset:\n", dataset)
 
     # Dump the generated dataset to a JSON file
-    output_path = find_project_root(__file__) / "data" / "generated_dataset.json"
+    cfg.output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = cfg.output_dir / "generated_dataset.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(dataset.model_dump(), f, ensure_ascii=False, indent=4)
     print(f"Generated dataset saved to {output_path}")
