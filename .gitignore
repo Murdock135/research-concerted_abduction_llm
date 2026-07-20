@@ -1,6 +1,12 @@
 
 scratch/
 
+# Generated pipeline run outputs (reproducible from a dataset + config; see metadata.json per run)
+experiments/runs/
+
+# Generated datasets (reproducible via scripts/generate_data.py)
+data/synthetic/generated/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

@@ -21,10 +21,10 @@ TODO:
     - Add configuration-driven execution
 """
 import json
-import os
 from pathlib import Path
 
 from concerted_abduction.extractors import ExtractorRegistry
+from concerted_abduction.utils.run_utils import latest_run_dir, make_run_dir, save_run_metadata
 from concerted_abduction.utils.utils import load_prompt
 from config.settings import ENVSettings, ConcertedAbductionSettings
 
@@ -42,9 +42,8 @@ def extract_uods(sample: dict, cfg):
     inputs = [output["response"] for output in sample["outputs"]]
     return extractor.create_uod(inputs)
 
-def save_hypotheses(sample_id: str, uod: dict, output_dir: str | Path = "results"):
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, f"{sample_id}_uod.json")
+def save_hypotheses(sample_id: str, uod: dict, run_dir: Path):
+    output_path = run_dir / f"{sample_id}_uod.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(uod, f, ensure_ascii=False, indent=4)
     print(f"Saved UoD for sample {sample_id} to {output_path}")
@@ -61,13 +60,22 @@ def main():
     if extractor_cfg.llm is None:
         raise ValueError(f"hypothesis_extractor config of type '{extractor_cfg.type}' requires an 'llm' section")
 
-    data_path = settings.data_generator.output_dir / "generated_dataset.json"
+    data_path = latest_run_dir(settings.data_generator.output_dir) / "generated_dataset.json"
     dataset = load_data(data_path)
     print("Loaded dataset:\n", dataset)
 
+    run_dir = make_run_dir(extractor_cfg.output_dir)
+    save_run_metadata(
+        run_dir,
+        dataset_path=str(data_path),
+        extractor_type=extractor_cfg.type,
+        prompt_path=str(extractor_cfg.prompt_path),
+        model=extractor_cfg.llm.model_name,
+    )
+
     for sample in dataset['samples']:
         uod = extract_uods(sample, extractor_cfg)
-        save_hypotheses(sample['scenario_id'], {"uod": uod}, output_dir=extractor_cfg.output_dir)
+        save_hypotheses(sample['scenario_id'], {"uod": uod}, run_dir=run_dir)
 
 if __name__ == "__main__":
     main()

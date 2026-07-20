@@ -2,7 +2,7 @@
 type = "common_input"
 prompt_path = "prompts/data_generators/common_input/v0.txt"
 examples_path = "data/synthetic/examples/common_input/v0.json"
-output_dir = "data"
+output_dir = "data/synthetic/generated/common_input/"
 
 [data_generator.llm]
 provider = "google_genai"

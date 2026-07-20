@@ -4,6 +4,7 @@ Generate synthetic data for the concerted abduction project using a language mod
 import json
 
 from concerted_abduction.data_utils import DataGeneratorRegistry
+from concerted_abduction.utils.run_utils import make_run_dir, save_run_metadata
 from config.settings import ENVSettings, ConcertedAbductionSettings
 
 def main():
@@ -28,11 +29,19 @@ def main():
     print("Generated Dataset:\n", dataset)
 
     # Dump the generated dataset to a JSON file
-    cfg.output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = cfg.output_dir / "generated_dataset.json"
+    run_dir = make_run_dir(cfg.output_dir)
+    output_path = run_dir / "generated_dataset.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(dataset.model_dump(), f, ensure_ascii=False, indent=4)
     print(f"Generated dataset saved to {output_path}")
+
+    save_run_metadata(
+        run_dir,
+        generator_type=cfg.type,
+        examples_path=str(cfg.examples_path),
+        model=cfg.llm.model_name,
+        prompt=prompt,
+    )
 
 if __name__ == "__main__":
     main()
