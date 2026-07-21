@@ -6,7 +6,7 @@
 uv sync
 ```
 
-Requires Python ≥ 3.13. Put your Gemini API key in `~/.secrets/.llm_apis` as `GEMINI_API_KEY=...` — see [configuration.md](configuration.md) for how `ENVSettings` loads it.
+Requires Python ≥ 3.13. Put your Gemini API key in a `.env` file at the project root as `GEMINI_API_KEY=...` — see [configuration.md](configuration.md) for how `ENVSettings` loads it.
 
 ## Generate synthetic data
 

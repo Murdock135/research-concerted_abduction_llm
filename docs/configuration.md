@@ -4,11 +4,11 @@ Configuration is layered, resolved by `src/config/settings.py`:
 
 1. **Bundled defaults** — `src/config/default_config.toml` (always loaded)
 2. **Project overrides** — `config.toml` at the project root (optional; not present by default — copy/create one to override defaults, it's deep-merged on top)
-3. **Environment / secrets** — `~/.secrets/.llm_apis` (API keys, loaded via dotenv-style `ENVSettings`)
+3. **Environment / secrets** — `.env` at the project root (API keys, loaded via dotenv-style `ENVSettings`)
 
 ## `ENVSettings`
 
-Loads API credentials into `os.environ` at construction time (`model_post_init`). Reads from `~/.secrets/.llm_apis`. Currently only knows about:
+Loads API credentials into `os.environ` at construction time (`model_post_init`). Reads from `<project_root>/.env` (`ENV_PATH` in `settings.py`, gitignored). Currently only knows about:
 
 ```
 GEMINI_API_KEY=...

@@ -26,7 +26,7 @@ Not yet implemented:
 uv sync
 ```
 
-API credentials go in `~/.secrets/.llm_apis`:
+API credentials go in a `.env` file at the project root:
 
 ```
 GEMINI_API_KEY=...

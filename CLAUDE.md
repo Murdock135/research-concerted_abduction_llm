@@ -12,7 +12,7 @@ Research project implementing **Concerted Abduction** with LLMs: combining outpu
 uv sync          # Install dependencies
 ```
 
-API credentials go in `~/.secrets/.llm_apis` as `GEMINI_API_KEY=...` (loaded via dotenv).
+API credentials go in a `.env` file at the project root as `GEMINI_API_KEY=...` (loaded via dotenv).
 
 ## Running Scripts
 

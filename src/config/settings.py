@@ -24,14 +24,14 @@ from concerted_abduction.utils.utils import find_project_root
 PROJECT_ROOT = find_project_root(__file__)
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "default_config.toml"
 PROJECT_CONFIG_PATH = PROJECT_ROOT / "config.toml"
-ENV_PATH = Path("~/.secrets/.llm_apis").expanduser()
+ENV_PATH = PROJECT_ROOT / ".env"
 
 
 # -----------------------------------------------------------------------
 # Environment settings
 # -----------------------------------------------------------------------
 class ENVSettings(BaseSettings):
-    """Loads API credentials from ~/.secrets/.llm_apis into the environment."""
+    """Loads API credentials from a project-root .env file into the environment."""
 
     model_config = SettingsConfigDict(env_file=ENV_PATH, extra="ignore")
 
