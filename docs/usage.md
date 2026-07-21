@@ -6,11 +6,7 @@
 uv sync
 ```
 
-Requires Python ≥ 3.13. Put your Gemini API key somewhere `ENVSettings` can find it as `GEMINI_API_KEY` — see the note in [configuration.md](configuration.md) about the two possible locations (`~/.secrets/.llm_apis` per CLAUDE.md vs. the `.env`-at-project-root path `settings.py` actually reads). Simplest reliable option: export it in your shell before running scripts.
-
-```bash
-export GEMINI_API_KEY=...
-```
+Requires Python ≥ 3.13. Put your Gemini API key in `~/.secrets/.llm_apis` as `GEMINI_API_KEY=...` — see [configuration.md](configuration.md) for how `ENVSettings` loads it.
 
 ## Generate synthetic data
 

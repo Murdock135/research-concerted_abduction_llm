@@ -8,15 +8,13 @@ Configuration is layered, resolved by `src/config/settings.py`:
 
 ## `ENVSettings`
 
-Loads API credentials into `os.environ` at construction time (`model_post_init`). Reads from `~/.secrets/.llm_apis` (path resolved as `<project_root>/.env`... actually resolved via `find_project_root(__file__).resolve() / ".env"` — see note below). Currently only knows about:
+Loads API credentials into `os.environ` at construction time (`model_post_init`). Reads from `~/.secrets/.llm_apis`. Currently only knows about:
 
 ```
 GEMINI_API_KEY=...
 ```
 
 Every script that calls the Gemini API constructs `ENVSettings()` first and raises `EnvironmentError` if `gemini_api_key` is missing, e.g. `scripts/generate_data.py` and `scripts/pipeline_prototype.py`.
-
-> Note: despite the docstring/CLAUDE.md saying `~/.secrets/.llm_apis`, `ENV_PATH` in `settings.py` is computed as `find_project_root(__file__).resolve() / ".env"` — i.e. it actually looks for a `.env` file at the project root, not `~/.secrets/.llm_apis`. If you hit `EnvironmentError: GEMINI_API_KEY not found`, check which of the two paths your key is actually in.
 
 ## `ConcertedAbductionSettings`
 
