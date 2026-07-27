@@ -4,65 +4,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Research project implementing **Concerted Abduction with LLMs** — a pipeline that uses multiple LLMs to generate hypotheses and combines their outputs using Dempster-Shafer theory of evidence. The goal is to aggregate partial, uncertain beliefs from different LLM sources into a unified universe of discourse.
+Research project implementing **Concerted Abduction** with LLMs: combining outputs from multiple LLMs using Dempster-Shafer Theory (belief functions) to synthesize conclusions from conflicting/overlapping model responses. Domain focus is medical diagnosis.
 
-## Commands
+Full documentation lives in `docs/` — start at [docs/README.md](docs/README.md) (or [docs/overview.md](docs/overview.md) for the research idea, [docs/architecture.md](docs/architecture.md) for how the code fits together, [docs/configuration.md](docs/configuration.md) for `config.toml`/`settings.py`, [docs/roadmap.md](docs/roadmap.md) for what's implemented vs. planned).
 
-This project uses `uv` for dependency management (Python 3.13).
+## Development Setup
 
 ```bash
-# Install dependencies
-uv sync
-
-# Run the data generation script
-uv run python scripts/generate_data.py
-
-# Run the pipeline prototype
-uv run python scripts/pipeline_prototype.py
+uv sync          # Install dependencies
 ```
 
-**API keys** are loaded from `~/.secrets/.llm_apis` via `python-dotenv`. The required key is `GEMINI_API_KEY`.
+Requires Python ≥ 3.13. API credentials go in a `.env` file at the project root as `GEMINI_API_KEY=...`, loaded via `ENVSettings` (`src/config/settings.py`).
+
+## Running Scripts
+
+```bash
+uv run python scripts/generate_data.py       # Generate synthetic dataset via Gemini API → data/generated_dataset.json
+uv run python scripts/pipeline_prototype.py  # Run the prototype abduction pipeline
+```
+
+No tests currently exist (`tests/` is empty).
 
 ## Architecture
 
-### Package: `src/concerted_abduction/`
+The pipeline has four stages, each an abstract component with pluggable implementations looked up by name through a registry, configured via `config.toml`/`src/config/default_config.toml` (see [docs/configuration.md](docs/configuration.md)):
 
-The pipeline has three planned stages (hypothesis extraction is partially implemented; mass functions and combiners are stubs):
+1. **Data generation** (`src/concerted_abduction/data_utils/`) — `CommonInputDataGenerator` calls Gemini with a structured JSON schema to produce synthetic scenarios where 3 named models (Model A/B/C) give different responses to the same input. Registry: `DataGeneratorRegistry`.
+2. **Hypothesis extraction** (`src/concerted_abduction/extractors/`) — `HypothesisExtractor` abstract base; `LlmHypothesisExtractor` uses Gemini to read all model outputs and produce a Universe of Discourse (UoD). Registry: `ExtractorRegistry`.
+3. **Mass function assignment** (`src/concerted_abduction/mass_functions/`) — not implemented yet.
+4. **Evidence combination** (`src/concerted_abduction/combiners/`) — not implemented yet (Dempster's rule).
 
-1. **Hypothesis Extraction** (`extractors/`) — given multiple LLM outputs for the same prompt, extract a shared universe of discourse (UoD)
-2. **Mass Function Assignment** (`mass_functions/`) — assign confidence/belief values per hypothesis (stub)
-3. **Evidence Combination** (`combiners/`) — combine mass functions using Dempster's rule (stub)
+**Dataset types** (`src/concerted_abduction/types.py`) — Pydantic models: `DataSample` (one scenario), `ModelOutput` (one model's response), `DataSet` (collection), `OverlapMatrix` (n×n similarity matrix).
 
-**Key modules:**
+See [docs/architecture.md](docs/architecture.md) for full detail and [docs/data_model.md](docs/data_model.md) for the schema.
 
-- `types.py` — Pydantic models: `ModelOutput`, `DataSample`, `DataSet`, `OverlapMatrix`. `DataSet` is the primary data container throughout the pipeline.
-- `extractors/base.py` — Abstract `HypothesisExtractor` with a single method `create_uod(inputs)`.
-- `extractors/registry.py` — `ExtractorRegistry` using a `@register(name)` class decorator to register extractor implementations.
-- `extractors/llm.py` — `LlmHypothesisExtractor`: calls Google GenAI (`gemini-2.5-flash`) with a configurable class-level `system_prompt`.
-- `data_utils/data_generator.py` — `CommonInputDataGenerator`: uses GenAI structured output (JSON schema from `DataSet.model_json_schema()`) to synthetically generate datasets. Loads its system prompt from `prompts/data_generators/common_input/v0.txt` and few-shot examples from `data/synthetic/examples/common_input/v0.json`.
-- `utils/utils.py` — `find_project_root()` (walks up to `.git`) and `load_prompt()` (reads `.txt` prompt files).
+## Key Conventions
 
-### Data Layout
+- Prompts live in `prompts/` and are loaded via `load_prompt()` from `src/concerted_abduction/utils/utils.py`.
+- Example data for prompting lives in `data/synthetic/examples/`.
+- Generated datasets go to `data/generated_dataset.json` or `data/synthetic/generated/`.
+- `find_project_root()` traverses up from `__file__` to locate `.git`.
+- Python ≥ 3.13 required; uses `uv_build` as build backend.
+- All LLM calls use the `google-genai` SDK with structured output (JSON schema from Pydantic models) where supported.
+- Component behavior (LLM/prompt/examples/output dir) is configured via `config.toml` (deep-merged over `src/config/default_config.toml`), not hardcoded — see [docs/configuration.md](docs/configuration.md).
+- New generators/extractors/mass functions/combiners are added via the base-class + registry pattern — see [docs/extending.md](docs/extending.md).
 
-```
-data/
-  generated_dataset.json          # output of generate_data.py
-  synthetic/
-    examples/common_input/v0.json # few-shot examples fed to data generator
-    generated/common_input/v0.json
-prompts/
-  data_generators/common_input/v0.txt  # system prompt for data generator
-experiments/
-  runs/prototype/                 # experiment outputs
-```
+## Current TODO
 
-Prompts and example files are versioned (`v0`, `v1`, …) and referenced by path. `find_project_root()` is used to resolve absolute paths so scripts can be run from any working directory.
+See [docs/roadmap.md](docs/roadmap.md) for the up-to-date list. Headline items:
 
-### LLM Integration
-
-The primary LLM SDK is `google-genai` (`from google import genai`). Structured outputs use `response_mime_type="application/json"` with `response_json_schema` from Pydantic models. The `integrations/` directory contains alternative wrappers (LangChain, OpenAI, Gemini) that are not yet used in the main pipeline.
-
-### Planned Work (from `todo.md`)
-
-- Helper to load env variables centrally
-- `config.toml` to configure prompts, examples, LLMs, and output dirs per pipeline component
+- Implement mass function assignment (`src/concerted_abduction/mass_functions/`)
+- Implement evidence combiners (`src/concerted_abduction/combiners/`)
