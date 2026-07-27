@@ -27,6 +27,7 @@ from concerted_abduction.extractors import ExtractorRegistry
 from concerted_abduction.utils.run_utils import latest_run_dir, make_run_dir, save_run_metadata
 from concerted_abduction.utils.utils import load_prompt
 from config.settings import ENVSettings, ConcertedAbductionSettings
+from concerted_abduction.types import DataSample, ModelOutput
 
 # -------------------------------------------------------------------
 # Helpers
@@ -34,13 +35,29 @@ def load_data(path: str):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def extract_uods(sample: dict, cfg):
+def extract_uods(_sample: dict[str, str], cfg):
     extractor_cls = ExtractorRegistry.get(cfg.type)
     extractor = extractor_cls(language_model=cfg.llm.model_name)
     extractor.set_system_prompt(load_prompt(cfg.prompt_path))
 
-    inputs = [output["response"] for output in sample["outputs"]]
-    return extractor.create_uod(inputs)
+    # Construct the DataSample object
+    model_outputs: list[ModelOutput] = []
+    for output in _sample['outputs']:
+        model_output = ModelOutput(
+            source=output['source'],
+            response=output['response']
+        )
+        model_outputs.append(model_output)
+
+    sample: DataSample = DataSample(
+        scenario_id= _sample['scenario_id'],
+        created_at=_sample['created_at'],
+        input_message=_sample['input_message'],
+        outputs=model_outputs
+    )
+
+    # Generate the uod
+    return extractor.create_uod(sample)
 
 def save_hypotheses(sample_id: str, uod: dict, run_dir: Path):
     output_path = run_dir / f"{sample_id}_uod.json"
