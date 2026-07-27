@@ -2,6 +2,13 @@ from .base import HypothesisExtractor
 from .registry import ExtractorRegistry
 
 from google import genai
+from pydantic import BaseModel, Field
+
+# Output schema for the LlmHypothesisExtractor
+
+class UoD(BaseModel):
+    source_info: dict[str, str] = Field(..., description="Mapping of source -> response from source. For example, 'source 1: <hypothesis of source 1>, source 2: <hypotheses of source 2>, ...")
+    uod: str = Field(..., description="The power set that represents the universe of discourse. Sets are enclosed in curly braces '{}'. ")
 
 @ExtractorRegistry.register("llm_hypothesis_extractor")
 class LlmHypothesisExtractor(HypothesisExtractor):
