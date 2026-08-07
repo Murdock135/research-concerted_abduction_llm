@@ -14,7 +14,7 @@ def git_sha() -> str | None:
 
 
 def make_run_dir(base_dir: str | Path) -> Path:
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    run_id = datetime.now(timezone.utc).strftime("%d_%m_%Y-%H_%M_%S")
     run_dir = Path(base_dir) / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir
@@ -22,10 +22,12 @@ def make_run_dir(base_dir: str | Path) -> Path:
 
 def latest_run_dir(base_dir: str | Path) -> Path:
     base_dir = Path(base_dir)
-    run_dirs = sorted(p for p in base_dir.iterdir() if p.is_dir())
+    run_dirs = [p for p in base_dir.iterdir() if p.is_dir()]
     if not run_dirs:
         raise FileNotFoundError(f"No run directories found under {base_dir}")
-    return run_dirs[-1]
+
+    return max(run_dirs, key=lambda path: path.stat().st_mtime)
+
 
 
 def save_run_metadata(run_dir: str | Path, **fields) -> None:
