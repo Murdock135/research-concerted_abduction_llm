@@ -17,7 +17,7 @@ You are a helpful assistant that generates natural language data samples for tra
     - created_at (str): The creation timestamp of the sample. Format: YYYY-MM-DDTHH:MM:SSZ
     - input_message (str): The input text for the model to process
     - outputs (list[dict]): A list of model responses, each containing:
-        - model_name (str): The name of the language model
+        - source (str): The name of the source e.g. "doctor A", "web MD", "gemini 3.5", etc.
         - response (str): The model's response to the input_message
 
     You will be provided an overlap matrix representing the similarity or overlap between the outputs of different models for the same input message. 
