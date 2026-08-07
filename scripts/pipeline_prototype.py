@@ -27,7 +27,7 @@ from concerted_abduction.extractors import ExtractorRegistry
 from concerted_abduction.utils.run_utils import latest_run_dir, make_run_dir, save_run_metadata
 from concerted_abduction.utils.utils import load_prompt
 from config.settings import ENVSettings, ConcertedAbductionSettings
-from concerted_abduction.types import DataSample, ModelOutput
+from concerted_abduction.types import DataSample, ModelOutput, ExtractorOutput
 
 # -------------------------------------------------------------------
 # Helpers
@@ -35,7 +35,7 @@ def load_data(path: str):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def extract_uods(_sample: dict[str, str], cfg):
+def extract_frame(_sample: dict[str, str], cfg):
     extractor_cls = ExtractorRegistry.get(cfg.type)
     extractor = extractor_cls(language_model=cfg.llm.model_name)
     extractor.set_system_prompt(load_prompt(cfg.prompt_path))
@@ -57,15 +57,15 @@ def extract_uods(_sample: dict[str, str], cfg):
     )
 
     # Generate the uod
-    return extractor.create_uod(sample)
+    return extractor.generate_frame(sample)
 
-def save_hypotheses(sample_id: str, uod: dict, run_dir: Path):
-    output_path = run_dir / f"{sample_id}_uod.json"
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(uod, f, ensure_ascii=False, indent=4)
-    print(f"Saved UoD for sample {sample_id} to {output_path}")
+def save_frame(run_dir: Path, sample_id: str, frame: ExtractorOutput):
+    output_path = run_dir / f"{sample_id}_frame.json"
+
+    with open(output_path, mode='w') as f:
+        json.dump(frame.model_dump(), f, indent=4)
+
 # -------------------------------------------------------------------
-
 def main():
     """Main execution function for the pipeline prototype."""
     env = ENVSettings()
@@ -91,8 +91,8 @@ def main():
     )
 
     for sample in dataset['samples']:
-        uod = extract_uods(sample, extractor_cfg)
-        save_hypotheses(sample['scenario_id'], {"uod": uod}, run_dir=run_dir)
+        frame: ExtractorOutput = extract_frame(sample, extractor_cfg)
+        save_frame(run_dir, sample['scenario_id'], frame)
 
 if __name__ == "__main__":
     main()
