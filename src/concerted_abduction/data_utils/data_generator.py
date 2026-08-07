@@ -44,6 +44,9 @@ class CommonInputDataGenerator(DataGenerator):
             )
         )
 
+        if response.text is None:
+            raise ValueError("LLM response contained no text")
+
         samples = DataSet.model_validate_json(response.text)
         return samples
 

@@ -29,11 +29,11 @@ class DataSet(BaseModel):
                 return sample
         return None
     
-    def get_samples_by_model_name(self, model_name: str) -> list[DataSample]:
+    def get_samples_by_source(self, source: str) -> list[DataSample]:
         result = []
         for sample in self.samples:
             for output in sample.outputs:
-                if output.model_name == model_name:
+                if output.source == source:
                     result.append(sample)
                     break
         return result
@@ -47,7 +47,7 @@ class DataSet(BaseModel):
                     "scenario_id": sample.scenario_id,
                     "created_at": sample.created_at,
                     "input_message": sample.input_message,
-                    "model_name": output.model_name,
+                    "source": output.source,
                     "response": output.response
                 })
         return pd.DataFrame(data)
