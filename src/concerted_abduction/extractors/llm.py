@@ -3,9 +3,10 @@ from .registry import ExtractorRegistry
 
 from google import genai
 from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 from pydantic import BaseModel, Field
 
-from concerted_abduction.types import DataSample, ExtractorOutput
+from concerted_abduction.types import DataSample, FrameOfDiscernment, ExtractorOutput
 
 
 @ExtractorRegistry.register("llm_hypothesis_extractor")
@@ -18,8 +19,10 @@ class LlmHypothesisExtractor(HypothesisExtractor):
     customized to guide the LLM's output format and reasoning approach.
     
     Attributes:
-        language_model: The name/identifier of the language model to use
-        system_prompt: The instruction prompt sent to the LLM
+        Instance attributes:
+            language_model: The name/identifier of the language model to use
+        Class attributes:
+            system_prompt: The instruction prompt sent to the LLM
     """
 
     system_prompt = ""
@@ -27,8 +30,8 @@ class LlmHypothesisExtractor(HypothesisExtractor):
     def __init__(self, language_model):
         self.language_model = language_model
 
-    def create_uod(self, sample: DataSample):
-        """Create universe of discourse from input using LLM.
+    def generate_frame(self, sample: DataSample):
+        """Generate a frame of discernment from input using LLM.
         Args:
             A list of dicts of the form:
                 [
@@ -37,7 +40,7 @@ class LlmHypothesisExtractor(HypothesisExtractor):
                     ...,
                 ]
         Returns:
-            The universe of discourse (UoD) based on the inputs provided. The shape of the UoD
+            The Frame of discernment aka universe of discourse (UoD) based on the inputs provided. The shape of the UoD
             is- 
                 {
                     'source_info': {
@@ -47,7 +50,6 @@ class LlmHypothesisExtractor(HypothesisExtractor):
                     'uod': <'text'>
                 }
         """
-        breakpoint()
 
         # Instantiate the language model (google)
         client = genai.Client()
@@ -62,6 +64,10 @@ class LlmHypothesisExtractor(HypothesisExtractor):
             response = client.models.generate_content(
                 model=self.language_model,
                 contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    response_mime_type='application/json',
+                    response_schema=FrameOfDiscernment
+                    )
             )
         except genai_errors.APIError as e:
             raise RuntimeError(f"Gemini API call failed: {e}") from e
@@ -69,11 +75,13 @@ class LlmHypothesisExtractor(HypothesisExtractor):
         if response.text is None:
             raise ValueError("LLM response contained no text")
 
+        frame = FrameOfDiscernment.model_validate_json(response.text)
+
         return ExtractorOutput(
-            hypotheses={model_output.source : model_output.response for model_output in sample.outputs},
-            uod=response.text
-        )
-    
+                hypotheses={output.source: output.response for output in sample.outputs},
+                frame=frame
+                )
+
     @classmethod
     def set_system_prompt(cls, prompt: str):
         """Set the system prompt for the LLM."""

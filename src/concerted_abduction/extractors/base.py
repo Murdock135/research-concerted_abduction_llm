@@ -6,6 +6,6 @@ class HypothesisExtractor(ABC):
     """Base class for Hypothesis Extractors."""
 
     @abstractmethod
-    def create_uod(self, inputs: DataSample) -> ExtractorOutput:
-        """Create universe of discourse from input."""
+    def generate_frame(self, sample: DataSample) -> ExtractorOutput:
+        """Generate a frame of discernment aka a universe of discourse from input."""
         pass

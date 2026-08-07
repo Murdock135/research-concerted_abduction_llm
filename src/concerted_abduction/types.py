@@ -52,6 +52,9 @@ class DataSet(BaseModel):
                 })
         return pd.DataFrame(data)
 
+class FrameOfDiscernment(BaseModel):
+    frame: list[str] = Field(..., description="The frame of discernment for the current scenario.")
+
 class ExtractorOutput(BaseModel):
     hypotheses: dict[str, str] = Field(default_factory=dict, description="Mapping of source -> response from source. For example, 'source 1: <hypothesis of source 1>, source 2: <hypotheses of source 2>, ...")
-    uod: str
+    frame: FrameOfDiscernment
