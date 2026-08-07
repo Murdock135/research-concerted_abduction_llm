@@ -28,7 +28,7 @@
 │       └── default_config.toml      Bundled default component config
 │
 ├── scripts/
-│   ├── generate_data.py            Entry point: generate synthetic dataset → data/generated_dataset.json
+│   ├── generate_data.py            Entry point: generate synthetic dataset in a timestamped run
 │   ├── pipeline_prototype.py       Entry point: load dataset, run hypothesis extraction per sample
 │   └── run.py                      Empty — unused
 │
@@ -37,13 +37,12 @@
 │   └── extractors/hypothesis/v0.txt
 │
 ├── data/
-│   ├── generated_dataset.json      Output of scripts/generate_data.py
 │   └── synthetic/
 │       ├── examples/common_input/v0.json    Few-shot examples used in the data-generation prompt
-│       └── generated/common_input/v0.json   An earlier/alternate generated dataset
+│       └── generated/common_input/<run>/    Timestamped outputs of scripts/generate_data.py
 │
 ├── experiments/
-│   └── runs/                       Output of pipeline_prototype.py — one <scenario_id>_uod.json per sample
+│   └── runs/                       Timestamped pipeline runs with one <scenario_id>_frame.json per sample
 │
 ├── integrations/                   Root-level (NOT under src/) — gemini.py, langchain.py, openai.py
 │                                    all currently empty stub files, unused

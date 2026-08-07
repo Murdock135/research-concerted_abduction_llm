@@ -9,7 +9,7 @@
 
  data_utils/           ->  extractors/               ->  mass_functions/      ->  combiners/
 
- data/generated_dataset.json   experiments/runs/*_uod.json
+ data/.../<run>/generated_dataset.json   experiments/runs/<run>/*_frame.json
 ```
 
 Each stage is defined as an abstract **component** (a base class + a package) with one or more concrete, **pluggable implementations**, looked up by name through a **registry** at runtime (see [extending.md](extending.md)). Which implementation, LLM, prompt file, and example file each component uses for a given run is controlled by `config.toml` (see [configuration.md](configuration.md)) — the descriptions below name the implementation currently registered as the default for each stage, not a fixed part of the stage itself.
@@ -24,18 +24,18 @@ Default implementation — `CommonInputDataGenerator` (`data_generator.py`), reg
 - Calls the Gemini API with `response_mime_type="application/json"` and `response_json_schema=DataSet.model_json_schema()`, so the model is constrained to emit valid `DataSet` JSON directly.
 - Given a natural-language instruction (e.g. "Generate 5 data samples in a medical diagnosis scenario for 3 models with overlap matrix [...]"), it returns a `DataSet` of synthetic scenarios where 3 named models ("A", "B", "C") each give a differentiated response to the same input.
 
-Driven by `scripts/generate_data.py`, which resolves whichever generator is configured and writes the result to `data/generated_dataset.json`.
+Driven by `scripts/generate_data.py`, which resolves whichever generator is configured and writes the result to a timestamped directory under the configured output directory.
 
 ## 2. Hypothesis extraction
 
-Package: `src/concerted_abduction/extractors/`. Base class: `HypothesisExtractor` (`create_uod(inputs)`). Registry: `ExtractorRegistry`.
+Package: `src/concerted_abduction/extractors/`. Base class: `HypothesisExtractor` (`generate_frame(sample)`). Registry: `ExtractorRegistry`.
 
 Default implementation — `LlmHypothesisExtractor` (`llm.py`), registered as `"llm_hypothesis_extractor"`:
 
 - Takes the list of model responses for one scenario (the `outputs` from a `DataSample`) and asks Gemini to synthesize a single **Universe of Discourse (UoD)** — the combined set of hypotheses implied across all the model outputs, since each model's response only covers a fractional piece of it.
-- Unlike the default data generator, this call is *not* schema-constrained — it returns free-text (`response.text`), not a typed object. Downstream stages will need to parse or further constrain this (or a future implementation could constrain it directly).
+- Constrains Gemini to return a typed `FrameOfDiscernment` containing the elementary hypotheses.
 
-Driven by `scripts/pipeline_prototype.py`, which loads `data/generated_dataset.json`, resolves whichever extractor is configured, extracts a UoD per sample, and writes each one to `experiments/runs/<scenario_id>_uod.json`.
+Driven by `scripts/pipeline_prototype.py`, which loads the latest generated dataset, resolves whichever extractor is configured, extracts a frame per sample, and writes each one to a timestamped run directory as `<scenario_id>_frame.json`.
 
 ## 3. Mass function assignment (planned)
 

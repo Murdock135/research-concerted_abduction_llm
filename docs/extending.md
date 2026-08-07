@@ -42,7 +42,7 @@ The same pattern applies to `src/concerted_abduction/extractors/` (`HypothesisEx
 
 ## Adding a new hypothesis extractor
 
-Same steps, but subclass `HypothesisExtractor` and implement `create_uod(self, inputs)`, decorate with `@ExtractorRegistry.register("your_name")`.
+Same steps, but subclass `HypothesisExtractor` and implement `generate_frame(self, sample)`, then decorate it with `@ExtractorRegistry.register("your_name")`.
 
 ## Mass functions and combiners (not yet started)
 
