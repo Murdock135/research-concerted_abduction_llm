@@ -1,35 +1,54 @@
+from collections.abc import Callable
 from typing import TypeVar
 
 from concerted_abduction.llm.base import LanguageModel
 
-L = TypeVar('L', bound=LanguageModel)
+L = TypeVar("L", bound=LanguageModel)
 
 
 class LanguageModelRegistry:
-    _language_models: dict[str, type[LanguageModel]] = {}
+    _providers: dict[str, type[LanguageModel]] = {}
 
     @classmethod
-    def register(cls, name: str):
-        """Register the Language Model object as the given name."""
-        def wrapper(language_model: type[L]) -> type[L]:
-            cls._language_models[name] = language_model
-            return language_model
-        
+    def register(cls, provider: str) -> Callable[[type[L]], type[L]]:
+        """Register a language-model implementation for a provider."""
+        def wrapper(language_model_cls: type[L]) -> type[L]:
+            if provider in cls._providers:
+                raise ValueError(f"Provider {provider!r} is already registered")
+
+            cls._providers[provider] = language_model_cls
+            return language_model_cls
+
         return wrapper
 
     @classmethod
-    def get(cls, name: str):
-        """Return a registered language model"""
-        if name not in cls._language_models:
+    def _get(cls, provider: str) -> type[LanguageModel]:
+        """Return the language-model class registered for a provider."""
+        if provider not in cls._providers:
+            available = ", ".join(cls.list_providers()) or "(none registered)"
             raise ValueError(
-                f"Unknown language model: {name}. "
-                f"Available language models: {cls.list_language_models()}"
+                f"Unknown language model provider: {provider!r}. "
+                f"Available providers: {available}"
             )
 
-        return cls._language_models[name]
+        return cls._providers[provider]
 
     @classmethod
-    def list_language_models(cls):
-        """List registered language models"""
-        language_models = [f"{name}\n" for name in cls._language_models]
-        return f"Language Models:\n{language_models}"
+    def create(
+        cls,
+        provider: str,
+        model: str,
+        system_prompt: str = "",
+    ) -> LanguageModel:
+        """Create a language model from ordinary Python values."""
+        language_model_cls = cls._get(provider)
+
+        return language_model_cls(
+            model=model,
+            system_prompt=system_prompt,
+        )
+
+    @classmethod
+    def list_providers(cls) -> list[str]:
+        """List registered language-model providers."""
+        return sorted(cls._providers)

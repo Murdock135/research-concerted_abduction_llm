@@ -16,7 +16,7 @@ class ExtractorRegistry:
         """
         Register an extractor.
         """
-        def wrapper(extractor_cls: Type[T]) -> Type[T]:
+        def wrapper(extractor_cls: type[T]) -> type[T]:
             # fail if an object of type HypothesisExtractor has not been supplied
             if not issubclass(extractor_cls, HypothesisExtractor):
                 raise TypeError(f"{extractor_cls.__name__} must inherit from HypothesisExtractor")

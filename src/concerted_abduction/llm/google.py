@@ -1,5 +1,3 @@
-from typing import Any
-
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
@@ -8,8 +6,8 @@ from pydantic import BaseModel
 from concerted_abduction.llm.base import LanguageModel
 from concerted_abduction.llm.registry import LanguageModelRegistry
 
-@LanguageModelRegistry.register('gemini-google_genai')
-class GeminiLanguageModel(LanguageModel):
+@LanguageModelRegistry.register("google_genai")
+class GoogleGenAILanguageModel(LanguageModel):
     def generate(
         self,
         prompt: str,

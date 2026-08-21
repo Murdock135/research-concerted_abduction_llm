@@ -7,8 +7,7 @@ from pydantic import BaseModel
 @dataclass
 class LanguageModel(ABC):
     model: str
-    provider: str
-    system_prompt: str
+    system_prompt: str = ""
 
     @abstractmethod
     def generate(

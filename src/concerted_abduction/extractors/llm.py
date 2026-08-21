@@ -1,12 +1,13 @@
+from typing import Self
+
+from concerted_abduction.llm.base import LanguageModel
+from concerted_abduction.llm.registry import LanguageModelRegistry
+from concerted_abduction.types import DataSample, ExtractorOutput, FrameOfDiscernment
+from concerted_abduction.utils.utils import load_prompt
+from config.settings import ComponentConfig
+
 from .base import HypothesisExtractor
 from .registry import ExtractorRegistry
-
-from google import genai
-from google.genai import errors as genai_errors
-from google.genai import types as genai_types
-from pydantic import BaseModel, Field
-
-from concerted_abduction.types import DataSample, FrameOfDiscernment, ExtractorOutput
 
 
 @ExtractorRegistry.register("llm_hypothesis_extractor")
@@ -19,18 +20,35 @@ class LlmHypothesisExtractor(HypothesisExtractor):
     customized to guide the LLM's output format and reasoning approach.
     
     Attributes:
-        Instance attributes:
-            language_model: The name/identifier of the language model to use
-        Class attributes:
-            system_prompt: The instruction prompt sent to the LLM
+        language_model: Configured language-model implementation to use.
     """
 
-    system_prompt = ""
-
-    def __init__(self, language_model):
+    def __init__(self, language_model: LanguageModel) -> None:
         self.language_model = language_model
 
-    def generate_frame(self, sample: DataSample):
+    @classmethod
+    def from_config(cls, cfg: ComponentConfig) -> Self:
+        """Construct an extractor from application configuration."""
+        if cfg.llm is None:
+            raise ValueError(
+                f"Extractor {cfg.type!r} requires a language model. "
+                "Please specify one in the configuration file."
+            )
+        if cfg.prompt_path is None:
+            raise ValueError(
+                f"Extractor {cfg.type!r} requires a prompt path. "
+                "Please specify one in the configuration file."
+            )
+
+        language_model = LanguageModelRegistry.create(
+            provider=cfg.llm.provider,
+            model=cfg.llm.model_name,
+            system_prompt=load_prompt(cfg.prompt_path),
+        )
+
+        return cls(language_model=language_model)
+
+    def generate_frame(self, sample: DataSample) -> ExtractorOutput:
         """Generate a frame of discernment from input using LLM.
         Args:
             A list of dicts of the form:
@@ -51,38 +69,22 @@ class LlmHypothesisExtractor(HypothesisExtractor):
                 }
         """
 
-        # Instantiate the language model (google)
-        client = genai.Client()
         prompt = (
-            self.system_prompt 
-            + ", Here are the inputs: " 
-            + "\n" 
-            + '\n'.join([f"{model_output.source}:{model_output.response}" for model_output in sample.outputs])
+            "Here are the inputs:\n"
+            + "\n".join(
+                f"{model_output.source}: {model_output.response}"
+                for model_output in sample.outputs
+            )
         )
 
-        try:
-            response = client.models.generate_content(
-                model=self.language_model,
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    response_mime_type='application/json',
-                    response_schema=FrameOfDiscernment
-                    )
-            )
-        except genai_errors.APIError as e:
-            raise RuntimeError(f"Gemini API call failed: {e}") from e
-
-        if response.text is None:
-            raise ValueError("LLM response contained no text")
-
-        frame = FrameOfDiscernment.model_validate_json(response.text)
+        frame = self.language_model.generate(
+            prompt,
+            output_schema=FrameOfDiscernment,
+        )
+        if not isinstance(frame, FrameOfDiscernment):
+            raise TypeError("Language model returned an unexpected output type")
 
         return ExtractorOutput(
-                hypotheses={output.source: output.response for output in sample.outputs},
-                frame=frame
-                )
-
-    @classmethod
-    def set_system_prompt(cls, prompt: str):
-        """Set the system prompt for the LLM."""
-        cls.system_prompt = prompt
+            hypotheses={output.source: output.response for output in sample.outputs},
+            frame=frame,
+        )
