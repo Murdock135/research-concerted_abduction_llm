@@ -1,4 +1,5 @@
-from typing import Dict, Type, TypeVar
+from typing import TypeVar
+
 from concerted_abduction.extractors.base import HypothesisExtractor
 
 T = TypeVar('T', bound=HypothesisExtractor)
@@ -8,7 +9,7 @@ class ExtractorRegistry:
     ExtractorRegistry is the object that allows registering HypothesisExtractor objects, getting them and listing available ones.
     The list of Extractors are contained in a dict with the format {name: ExtractorObject}
     """
-    _extractors: Dict[str, Type[HypothesisExtractor]] = {} 
+    _extractors: dict[str, type[HypothesisExtractor]] = {} 
 
     @classmethod
     def register(cls, name: str):

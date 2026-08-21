@@ -6,8 +6,9 @@ from google.genai import types as genai_types
 from pydantic import BaseModel
 
 from concerted_abduction.llm.base import LanguageModel
+from concerted_abduction.llm.registry import LanguageModelRegistry
 
-
+@LanguageModelRegistry.register('gemini-google_genai')
 class GeminiLanguageModel(LanguageModel):
     def generate(
         self,
