@@ -1,39 +1,206 @@
 # Contributing
 
-This is early-stage research code (see [docs/roadmap.md](docs/roadmap.md) for what's implemented vs. planned). There's no CI, no enforced linter, and no test suite yet, so this document is mostly about keeping the codebase consistent with itself while that infrastructure doesn't exist — not a formal process.
+Thanks for contributing. Concerted Abduction is early-stage research software
+that explores combining multiple language-model responses with
+Dempster-Shafer evidence theory. The first two pipeline stages work; mass
+assignment, evidence combination, and comprehensive tests are still planned.
 
-## Setup
+This guide gets you from a fresh checkout to a useful change. For the research
+background, start with [the project overview](docs/overview.md). For current
+priorities, see [the roadmap](docs/roadmap.md).
+
+## Project structure
+
+The repository is organized around replaceable pipeline components. This tree
+shows the files a contributor is most likely to touch:
+
+```text
+.
+├── src/
+│   ├── concerted_abduction/          # Main Python package
+│   │   ├── types.py
+│   │   ├── data_utils/               # DATA GENERATOR (SYNTHETIC)
+│   │   │   ├── base.py
+│   │   │   ├── registry.py
+│   │   │   └── data_generator.py
+│   │   ├── extractors/               # COMPONENTS used for extracting info from text
+│   │   │   ├── base.py
+│   │   │   ├── registry.py
+│   │   │   └── llm.py
+│   │   ├── llm/                      # MODULE FOR INVOKING LANGUAGE MODELS
+│   │   │   ├── base.py
+│   │   │   ├── registry.py
+│   │   │   └── google.py
+│   │   └── utils/                    # HELPERS LIVE HERE
+│   └── config/
+│       ├── settings.py               # Loads environment and TOML configuration
+│       └── default_config.toml       # Shared component defaults
+├── scripts/
+│   ├── generate_data.py              # Creates a timestamped synthetic dataset
+│   └── run.py                        # Runs extraction on the newest dataset
+├── prompts/                          # Versioned prompts; keep long prompts out of code
+├── data/synthetic/examples/          # Few-shot examples used for data generation
+├── docs/                             # Architecture, data model, ADRs, and proposals
+├── tests/                            # Test location; currently no test suite
+├── pyproject.toml                    # Package metadata, dependencies, and type-check config
+└── config.toml                       # Optional local overrides; absent by default
+```
+
+Generated datasets go under `data/synthetic/generated/`, and pipeline results
+go under `experiments/runs/`. Both are ignored by Git. The root-level
+`integrations/` package contains unused placeholders; active provider adapters
+belong in `src/concerted_abduction/llm/`.
+
+## 1. Set up the project
+
+You need:
+
+- Python 3.13 or newer
+- [`uv`](https://docs.astral.sh/uv/)
+- A Gemini API key for commands that call a language model
+
+Install the project and its development dependencies:
 
 ```bash
 uv sync
 ```
 
-Python ≥ 3.13 required. You'll need a `GEMINI_API_KEY` to run anything that calls the LLM — see [docs/configuration.md](docs/configuration.md) for where it's read from.
+Create `.env` in the repository root when you need to make API calls:
 
-Read [docs/README.md](docs/README.md) before making non-trivial changes — it walks through the research idea, the pipeline stages, the data schema, and the config/registry pattern in order.
+```dotenv
+GEMINI_API_KEY=your-key-here
+```
 
-## Adding a new pipeline component
+Never commit `.env` or credentials. You can work on domain types, registries,
+configuration, and unit tests without an API key.
 
-Data generation and hypothesis extraction are both implemented as **pluggable components**: an abstract base class + a name→class registry + a `config.toml` entry selecting which implementation runs. If you're adding a new data generator, extractor, or (once they exist) mass function / combiner, follow that existing pattern rather than special-casing your addition — see [docs/extending.md](docs/extending.md) for the concrete steps.
+Verify the local checkout without making an API call:
 
-If you're implementing **mass function assignment** or **evidence combination** (currently empty packages, see [docs/roadmap.md](docs/roadmap.md)), set them up the same way: `base.py` with an ABC, `registry.py` with a registry class, a concrete implementation registered via decorator, and a corresponding section added to `ConcertedAbductionSettings` in `src/config/settings.py` + `src/config/default_config.toml`.
+```bash
+uv run python -c "import concerted_abduction; print('import succeeded')"
+uv run basedpyright
+```
 
-## Conventions
+## 2. Start with components
 
-- **Types**: dataset/domain objects are Pydantic models in `src/concerted_abduction/types.py`. Extend this schema rather than passing around ad-hoc dicts.
-- **Paths**: use `find_project_root()` / `load_prompt()` from `src/concerted_abduction/utils/utils.py` instead of hardcoding relative paths — scripts should work regardless of the caller's working directory.
-- **Prompts**: keep prompt text in `prompts/`, loaded via `load_prompt()`, not inlined as Python string literals.
-- **Config over hardcoding**: LLM choice, prompt path, examples path, and output directory for a component belong in `config.toml`/`default_config.toml` (via `ComponentConfig`), not hardcoded in the component itself.
-- **Registries only register on import**: registration happens via decorator at import time. If you add a new implementation and `Registry.get()` can't find it, check it's actually imported (see the `__init__.py` files in `data_utils/` and `extractors/` for the pattern).
+Most project features are implemented as **components**. A component is a
+small class with one job—for example, a hypothesis extractor turns a sample
+into a set of possible hypotheses. Each component type has:
 
-## Tests
+- A base class that defines the required method.
+- One or more concrete implementations.
+- A registry that gives each implementation a configuration name.
 
-`tests/` currently only contains a `.gitkeep`. There's no test runner configured yet — if you add the first test, you'll also need to add a test dependency (e.g. `pytest`) to `pyproject.toml`. Until then, verify changes by actually running the affected script(s) against real or synthetic data.
+The extractor package is a good first example:
 
-## Commits
+```text
+src/concerted_abduction/extractors/
+├── base.py       # Defines what every extractor must do.
+├── llm.py        # Implements extraction with a language model.
+└── registry.py   # Maps names to extractor classes.
+```
 
-Keep commit messages short and describe what changed in plain language (see `git log` for the existing style — it's informal, not Conventional Commits). No PR template or required review process exists; this has been a single-contributor repo so far.
+### Create a component implementation
 
-## Secrets
+Subclass the relevant base class, implement its required method, and register
+the class under a unique name:
 
-Never commit API keys. `GEMINI_API_KEY` is read from an env file (see the note in [docs/configuration.md](docs/configuration.md) about exactly which path) — keep it out of version control.
+```python
+@ExtractorRegistry.register("my_extractor")
+class MyExtractor(HypothesisExtractor):
+    def generate_frame(self, sample: DataSample) -> ExtractorOutput:
+        # Convert the sample into the output required by this component type.
+        ...
+```
+
+The method signature is the component's contract. In this example, callers can
+use any registered extractor because every extractor accepts a `DataSample`
+and returns an `ExtractorOutput`.
+
+### Construct and invoke a component directly
+
+Direct construction is useful for prototypes and tests:
+
+```python
+extractor = MyExtractor()
+result = extractor.generate_frame(sample)
+```
+
+Pass constructor dependencies explicitly. For example, the existing
+`LlmHypothesisExtractor` receives a `LanguageModel` object.
+
+### Construct a component from configuration
+
+Runnable scripts select implementations by their registered names. A component
+that supports this mode provides a `from_config()` class method:
+
+```python
+# Resolve the configured implementation by its registry name.
+extractor_cls = ExtractorRegistry._get(cfg.type)
+
+# Construct it, including dependencies such as its language model and prompt.
+extractor = extractor_cls.from_config(cfg)
+
+# Invoke it through the common component interface.
+result = extractor.generate_frame(sample)
+```
+
+Registration happens when Python imports the implementation module. If a new
+component cannot be found, ensure its module is imported by the package's
+`__init__.py` before the registry lookup occurs.
+
+Once this flow is familiar, read [extending the project](docs/extending.md) for
+the full checklist and [the component design ADR](docs/adr/0002-component-design-pattern.md)
+for the rationale. The [architecture guide](docs/architecture.md) explains how
+components form the larger research pipeline.
+
+## 3. Run the current workflow
+
+Both commands below call Gemini and may incur usage costs.
+
+Generate a timestamped synthetic dataset:
+
+```bash
+uv run python scripts/generate_data.py
+```
+
+Then run hypothesis extraction against the newest generated dataset:
+
+```bash
+# Process one sample (the inexpensive default).
+uv run python scripts/run.py
+
+# Process a chosen number of samples or the entire dataset.
+uv run python scripts/run.py --num-samples 5
+uv run python scripts/run.py --all
+```
+
+Generated datasets are written below `data/synthetic/generated/`; extraction
+results are written below `experiments/runs/`. Both locations are ignored by
+Git. Each run includes metadata describing its inputs and configuration.
+
+The defaults live in `src/config/default_config.toml`. To experiment without
+changing shared defaults, create a repository-root `config.toml` containing
+only your overrides. Settings are deep-merged with the defaults.
+
+## 4. Try the component pattern
+
+Open [the component quickstart notebook](notebooks/component_quickstart.ipynb)
+with the project's Python environment and run it from top to bottom. It reads
+`GEMINI_API_KEY` from the repository's `.env` file and makes two Gemini
+requests, which may incur usage costs.
+
+The notebook walks through one complete example:
+
+1. Create a `DataSample`.
+2. Implement the `HypothesisExtractor` interface with a `LanguageModel`
+   dependency.
+3. Register the implementation by name.
+4. Construct and invoke it directly with an explicit `LanguageModel`.
+5. Construct it through the registry and the project's TOML configuration.
+6. Invoke it through the common interface and validate Gemini's structured
+   output.
+
+After it runs, change the extractor to ignore empty or duplicate responses and
+rerun the final cells. This is a small way to practice changing component
+behavior without changing its interface.
