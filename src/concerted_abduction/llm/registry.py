@@ -40,7 +40,7 @@ class LanguageModelRegistry:
         model: str,
         system_prompt: str = "",
     ) -> LanguageModel:
-        """Create a language model from ordinary Python values."""
+        """Create a LanguageModel object"""
         language_model_cls = cls._get(provider)
 
         return language_model_cls(

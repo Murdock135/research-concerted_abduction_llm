@@ -27,7 +27,7 @@ class ExtractorRegistry:
         return wrapper
 
     @classmethod
-    def get(cls, name: str):
+    def _get(cls, name: str) -> type[HypothesisExtractor]:
         """Get a registered extractor by name."""
         if name not in cls._extractors:
             raise ValueError(f"Unknown extractor: {name}. Available extractors: {cls.list_extractors()}")

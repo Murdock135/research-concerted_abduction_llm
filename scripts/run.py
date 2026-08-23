@@ -86,17 +86,17 @@ def load_dataset(path: Path) -> DataSet:
 
 def create_extractor(cfg: ComponentConfig) -> HypothesisExtractor:
     """Resolve an extractor and construct it through its config adapter."""
-    extractor_cls = ExtractorRegistry.get(cfg.type)
-    from_config: Any = getattr(extractor_cls, "from_config", None)
+    extractor_cls = ExtractorRegistry._get(cfg.type)
+
+    from_config: Any = getattr(extractor_cls, 'from_config', None)
     if not callable(from_config):
-        raise TypeError(
-            f"Configured extractor {cfg.type!r} does not provide from_config()"
-        )
+        raise TypeError(f"Configured extractor {extractor_cls.__name__} does not provide `from_config()`.")
 
     extractor = from_config(cfg)
     if not isinstance(extractor, HypothesisExtractor):
         raise TypeError(
-            f"{extractor_cls.__name__}.from_config() did not return an extractor"
+            f"{extractor_cls.__name__}.from_config() returned "
+            f"{type(extractor).__name__}, expected a HypothesisExtractor"
         )
     return extractor
 
