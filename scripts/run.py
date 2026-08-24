@@ -5,16 +5,18 @@ abductive-reasoning pipeline:
 
 1. Generate or load model responses to a common input.
 2. Extract a frame of discernment (the candidate hypotheses).
-3. Assign belief masses to those hypotheses.
-4. Combine evidence using Dempster-Shafer theory.
+3. Create cited focal sets for each source.
+4. Assign belief masses to those focal sets.
+5. Combine evidence using Dempster-Shafer theory.
 
 Current state:
     This runner loads the most recently generated dataset and executes the
-    configured frame-of-discernment extraction implementation. Mass assignment and
-    evidence combination will be added here once those stages are implemented.
+    configured frame-of-discernment extractor and focal-set creator. Mass
+    assignment and evidence combination will be added once implemented.
 
 TODO:
     - [x] Refactor frame extraction into concerted_abduction.fod.
+    - [x] Integrate focal-set creation.
     - [x] Add configuration-driven component and LLM-provider construction.
     - [ ] Implement and integrate mass-function assignment.
     - [ ] Implement and integrate evidence combination using Dempster's rule.
@@ -40,8 +42,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from concerted_abduction.focal_set import FocalSetCreator, FocalSetRegistry
 from concerted_abduction.fod import FodExtractorRegistry, FrameOfDiscernmentExtractor
-from concerted_abduction.types import DataSet, FodOutput
+from concerted_abduction.types import DataSet, FocalSetOutput, FodOutput
 from concerted_abduction.utils.run_utils import (
     latest_run_dir,
     make_run_dir,
@@ -60,7 +63,7 @@ def positive_int(value: str) -> int:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Extract frames of discernment using the configured implementation."
+        description="Run FoD extraction and focal-set creation."
     )
     sample_group = parser.add_mutually_exclusive_group()
     sample_group.add_argument(
@@ -101,8 +104,38 @@ def create_extractor(cfg: ComponentConfig) -> FrameOfDiscernmentExtractor:
     return extractor
 
 
+def create_focal_set_creator(cfg: ComponentConfig) -> FocalSetCreator:
+    """Resolve a focal-set creator and construct it through its config adapter."""
+    creator_cls = FocalSetRegistry._get(cfg.type)
+
+    from_config: Any = getattr(creator_cls, "from_config", None)
+    if not callable(from_config):
+        raise TypeError(
+            f"Configured focal-set creator {creator_cls.__name__} does not "
+            "provide `from_config()`."
+        )
+
+    creator = from_config(cfg)
+    if not isinstance(creator, FocalSetCreator):
+        raise TypeError(
+            f"{creator_cls.__name__}.from_config() returned "
+            f"{type(creator).__name__}, expected a FocalSetCreator"
+        )
+    return creator
+
+
 def save_frame(run_dir: Path, sample_id: str, result: FodOutput) -> None:
     output_path = run_dir / f"{sample_id}_frame.json"
+    output_path.write_text(
+        json.dumps(result.model_dump(), ensure_ascii=False, indent=4),
+        encoding="utf-8",
+    )
+
+
+def save_focal_sets(
+    run_dir: Path, sample_id: str, result: FocalSetOutput
+) -> None:
+    output_path = run_dir / f"{sample_id}_focal_sets.json"
     output_path.write_text(
         json.dumps(result.model_dump(), ensure_ascii=False, indent=4),
         encoding="utf-8",
@@ -116,12 +149,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     # Pydantic Settings supplies these required fields from TOML at runtime.
     settings = ConcertedAbductionSettings()  # pyright: ignore[reportCallIssue]
     extractor_cfg = settings.fod_extractor
+    focal_set_cfg = settings.focal_set
 
-    if (
-        extractor_cfg.llm is not None
-        and extractor_cfg.llm.provider == "google_genai"
-        and not env.gemini_api_key
-    ):
+    if extractor_cfg.output_dir != focal_set_cfg.output_dir:
+        raise ValueError(
+            "fod_extractor.output_dir and focal_set.output_dir must match so "
+            "pipeline artifacts are written to the same run directory"
+        )
+
+    uses_google = any(
+        cfg.llm is not None and cfg.llm.provider == "google_genai"
+        for cfg in (extractor_cfg, focal_set_cfg)
+    )
+    if uses_google and not env.gemini_api_key:
         raise EnvironmentError("GEMINI_API_KEY was not found in the environment")
 
     data_path = (
@@ -133,23 +173,40 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise ValueError(f"Dataset contains no samples: {data_path}")
 
     extractor = create_extractor(extractor_cfg)
+    focal_set_creator = create_focal_set_creator(focal_set_cfg)
     samples = dataset.samples if args.all else dataset.samples[: args.num_samples]
 
     run_dir = make_run_dir(extractor_cfg.output_dir)
     save_run_metadata(
         run_dir,
         dataset_path=str(data_path),
-        extractor_type=extractor_cfg.type,
-        prompt_path=str(extractor_cfg.prompt_path),
-        provider=(extractor_cfg.llm.provider if extractor_cfg.llm else None),
-        model=(extractor_cfg.llm.model_name if extractor_cfg.llm else None),
+        fod_extractor={
+            "type": extractor_cfg.type,
+            "prompt_path": str(extractor_cfg.prompt_path),
+            "provider": extractor_cfg.llm.provider if extractor_cfg.llm else None,
+            "model": extractor_cfg.llm.model_name if extractor_cfg.llm else None,
+        },
+        focal_set_creator={
+            "type": focal_set_cfg.type,
+            "prompt_path": str(focal_set_cfg.prompt_path),
+            "provider": focal_set_cfg.llm.provider if focal_set_cfg.llm else None,
+            "model": focal_set_cfg.llm.model_name if focal_set_cfg.llm else None,
+        },
         sample_count=len(samples),
         smoke_test=not args.all,
     )
 
     for sample in samples:
-        result = extractor.generate_frame(sample)
-        save_frame(run_dir, sample.scenario_id, result)
+        fod_result = extractor.generate_frame(sample)
+        focal_set_result = focal_set_creator.create_focal_sets(fod_result)
+        save_frame(run_dir, sample.scenario_id, fod_result)
+        save_focal_sets(run_dir, sample.scenario_id, focal_set_result)
+        if focal_set_result.validation_errors:
+            print(
+                f"Warning: {sample.scenario_id} focal sets failed "
+                f"{len(focal_set_result.validation_errors)} validation check(s); "
+                "the result was preserved"
+            )
         print(f"Processed {sample.scenario_id} -> {run_dir}")
 
     return 0

@@ -13,12 +13,13 @@ Early-stage research code. Working today:
 - Synthetic dataset generation (multiple model outputs per scenario)
 - Typed dataset schema
 - LLM-based frame-of-discernment (FoD) extraction
+- LLM-based focal-set creation with source-text citations
 
 Not yet implemented:
 
 - Mass function assignment (`src/concerted_abduction/mass_functions/`)
 - Evidence combination via Dempster's rule (`src/concerted_abduction/combiners/`)
-- The end-to-end pipeline script (`scripts/pipeline_prototype.py`) currently only loads a generated dataset
+- Mass assignment and evidence combination are not yet integrated into the runner
 
 ## Setup
 
@@ -36,22 +37,27 @@ GEMINI_API_KEY=...
 
 ```bash
 python scripts/generate_data.py       # Generate synthetic dataset via Gemini API -> data/generated_dataset.json
-python scripts/pipeline_prototype.py  # Run the (in-progress) prototype abduction pipeline
+uv run python scripts/run.py          # Run FoD extraction and focal-set creation
 ```
 
-No tests currently exist (`tests/` is empty).
+Run the unit tests with:
+
+```bash
+uv run python -m unittest discover -s tests -p 'test_*.py'
+```
 
 ## Architecture
 
 1. **Data generation** (`src/concerted_abduction/data_utils/data_generator.py`) — `CommonInputDataGenerator` calls Gemini with a structured JSON schema to produce synthetic scenarios where 3 named models (Model A/B/C) give different responses to the same input.
 2. **Dataset types** (`src/concerted_abduction/types.py`) — Pydantic models: `DataSample` (one scenario), `ModelOutput` (one model's response), `DataSet` (collection), `OverlapMatrix` (n×n similarity matrix).
 3. **Frame-of-discernment extraction** (`src/concerted_abduction/fod/`) — `FrameOfDiscernmentExtractor` abstract base; `LanguageModelFodExtractor` uses Gemini to read all model outputs and produce a frame of discernment (FoD). `FodExtractorRegistry` lets components be registered and retrieved by name.
-4. **Planned:** mass function assignment, evidence combiners, and a `config.toml`-driven configuration layer.
+4. **Focal-set creation** (`src/concerted_abduction/focal_set/`) — `LanguageModelFocalSetCreator` derives subsets of the FoD for each source, explains each subset, and cites verbatim supporting excerpts.
+5. **Planned:** mass function assignment and evidence combiners.
 
 ## Project layout
 
 ```
-src/concerted_abduction/  Core library (types, fod, data_utils, mass_functions, combiners)
+src/concerted_abduction/  Core library (types, fod, focal_set, data_utils, mass_functions, combiners)
 prompts/                  Prompt templates, loaded via load_prompt()
 data/                     Example data and generated datasets
 scripts/                  Runnable entry points (generate_data.py, pipeline_prototype.py)
@@ -75,5 +81,4 @@ notebooks/                Scratch notebooks
 
 - Implement mass function assignment (`mass_functions/`)
 - Implement evidence combiners (`combiners/`)
-- Add an environment variable loading helper
-- Add `config.toml` for configuring component prompts, example files, LLM selection per component, and output directories
+- Integrate mass assignment and evidence combination into the runner

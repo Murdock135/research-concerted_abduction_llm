@@ -35,6 +35,22 @@ A collection of samples, with a few convenience methods:
 
 Type alias: `npt.NDArray[np.int32]` — an n×n matrix where entry `(i, j)` represents the degree of overlap between model `i` and model `j`'s hypotheses for a scenario. Used as an input parameter when prompting the data generator (see the example prompt in [architecture.md](architecture.md)), not currently stored as a field on `DataSample` itself.
 
+## Focal-set output
+
+`FocalSetOutput` groups results by source through `SourceFocalSets`. Each
+`FocalSet` contains:
+
+| field | type | description |
+|---|---|---|
+| `hypotheses` | `list[str]` | A non-empty subset of exact labels from the frame of discernment |
+| `justification` | `str` | Why that source supports the subset |
+| `citations` | `list[str]` | Non-empty verbatim excerpts from the corresponding source text |
+
+`FocalSetOutput.validation_errors` records semantic problems found after
+generation, including invalid frame membership, source coverage, and citations.
+These checks do not discard the generated focal sets; the runner saves the
+output and emits a warning so failed experiments remain inspectable.
+
 ## Example JSON
 
 From `data/synthetic/examples/common_input/v0.json` (used as a few-shot example for data generation):
@@ -66,6 +82,7 @@ Note: the example file uses `id`, but the live `DataSample` schema field is `sce
 | `<data_generator.output_dir>/<run>/generated_dataset.json` | Output of `scripts/generate_data.py` |
 | `data/synthetic/generated/common_input/v0.json` | An earlier/alternate generated dataset |
 | `<fod_extractor.output_dir>/<run>/<scenario_id>_frame.json` | Structured FoD-extraction output, one file per scenario |
+| `<fod_extractor.output_dir>/<run>/<scenario_id>_focal_sets.json` | Cited focal sets grouped by source, one file per scenario |
 
 ---
 Next: [configuration.md](configuration.md) — how to control which LLM/prompt/examples each component uses.

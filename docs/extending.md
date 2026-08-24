@@ -1,6 +1,6 @@
 # Extending: the registry pattern
 
-Both pluggable component types (data generators, FoD extractors) follow the same pattern: an abstract base class, a decorator-based registry, and lookup by string name from `config.toml`.
+The pluggable component types (data generators, FoD extractors, and focal-set creators) follow the same pattern: an abstract base class, a decorator-based registry, and lookup by string name from `config.toml`.
 
 ## Anatomy
 
@@ -43,6 +43,10 @@ The same pattern applies to `src/concerted_abduction/fod/` (`FrameOfDiscernmentE
 ## Adding a new frame-of-discernment extractor
 
 Same steps, but subclass `FrameOfDiscernmentExtractor` and implement `generate_frame(self, sample)`, then decorate it with `@FodExtractorRegistry.register("your_name")`.
+
+## Adding a new focal-set creator
+
+Subclass `FocalSetCreator`, implement `create_focal_sets(self, fod_output)`, and decorate the implementation with `@FocalSetRegistry.register("your_name")`. The result must be a `FocalSetOutput`; implementations should preserve source attribution and ensure every cited excerpt comes from its corresponding source text.
 
 ## Mass functions and combiners (not yet started)
 

@@ -18,6 +18,10 @@
 │   │   │   ├── base.py               FrameOfDiscernmentExtractor ABC
 │   │   │   ├── registry.py           FodExtractorRegistry
 │   │   │   └── llm.py                LanguageModelFodExtractor ("language_model_fod_extractor")
+│   │   ├── focal_set/               Focal-set creation component
+│   │   │   ├── base.py               FocalSetCreator ABC
+│   │   │   ├── registry.py           FocalSetRegistry
+│   │   │   └── llm.py                LanguageModelFocalSetCreator
 │   │   ├── mass_functions/          EMPTY — planned, see roadmap.md
 │   │   ├── combiners/               EMPTY — planned, see roadmap.md
 │   │   ├── core/                    EMPTY
@@ -29,12 +33,13 @@
 │
 ├── scripts/
 │   ├── generate_data.py            Entry point: generate synthetic dataset in a timestamped run
-│   ├── pipeline_prototype.py       Entry point: load dataset, run hypothesis extraction per sample
-│   └── run.py                      Empty — unused
+│   ├── pipeline_prototype.py       Earlier pipeline prototype
+│   └── run.py                      Entry point: FoD extraction then focal-set creation
 │
 ├── prompts/                        System prompts for LLM-driven components
 │   ├── data_generators/common_input/v0.txt
-│   └── fod/v0.txt
+│   ├── fod/v0.txt
+│   └── focal_set/v0.txt
 │
 ├── data/
 │   └── synthetic/
@@ -50,7 +55,7 @@
 ├── notebooks/
 │   └── scratch_gemini_api.ipynb    Scratch notebook, not part of the pipeline
 │
-├── tests/                          Empty (.gitkeep only) — no tests exist yet
+├── tests/                          Unit tests and optional API smoke checks
 │
 └── docs/                           You are here
 ```

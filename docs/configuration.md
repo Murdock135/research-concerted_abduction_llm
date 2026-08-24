@@ -18,7 +18,7 @@ Every script that calls the Gemini API constructs `ENVSettings()` first and rais
 
 ## `ConcertedAbductionSettings`
 
-The main settings object. Two top-level sections currently, one per pipeline component:
+The main settings object. Three top-level sections currently, one per implemented pipeline component:
 
 ```toml
 [data_generator]
@@ -37,6 +37,15 @@ prompt_path = "prompts/fod/v0.txt"
 output_dir = "experiments/runs"
 
 [fod_extractor.llm]
+provider = "google_genai"
+model = "gemini-2.5-flash"
+
+[focal_set]
+type = "language_model_focal_set_creator"
+prompt_path = "prompts/focal_set/v0.txt"
+output_dir = "experiments/runs"
+
+[focal_set.llm]
 provider = "google_genai"
 model = "gemini-2.5-flash"
 ```
@@ -75,6 +84,7 @@ env = ENVSettings()  # populates os.environ["GEMINI_API_KEY"]
 settings = ConcertedAbductionSettings()
 gen_cfg = settings.data_generator
 extractor_cfg = settings.fod_extractor
+focal_set_cfg = settings.focal_set
 ```
 
 ---

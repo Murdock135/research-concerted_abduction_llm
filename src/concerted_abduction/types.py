@@ -58,3 +58,44 @@ class FrameOfDiscernment(BaseModel):
 class FodOutput(BaseModel):
     hypotheses: dict[str, str] = Field(default_factory=dict, description="Mapping of source -> response from source. For example, 'source 1: <hypothesis of source 1>, source 2: <hypotheses of source 2>, ...")
     frame: FrameOfDiscernment
+
+
+class FocalSet(BaseModel):
+    hypotheses: list[str] = Field(
+        ...,
+        min_length=1,
+        description="A non-empty subset of hypotheses from the frame of discernment.",
+    )
+    justification: str = Field(
+        ...,
+        min_length=1,
+        description="Explanation of why the source supports this focal set.",
+    )
+    citations: list[str] = Field(
+        ...,
+        min_length=1,
+        description="Verbatim excerpts from the source text supporting the focal set.",
+    )
+
+
+class SourceFocalSets(BaseModel):
+    source: str = Field(..., min_length=1, description="Source identifier from FodOutput.hypotheses.")
+    focal_sets: list[FocalSet] = Field(
+        ...,
+        min_length=1,
+        description="Focal sets supported by this source.",
+    )
+
+
+class FocalSetOutput(BaseModel):
+    sources: list[SourceFocalSets] = Field(
+        default_factory=list,
+        description="Focal sets and cited support grouped by source.",
+    )
+    validation_errors: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Post-generation validation issues found by the focal-set creator. "
+            "An empty list means semantic validation passed."
+        ),
+    )

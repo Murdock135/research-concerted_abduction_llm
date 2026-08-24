@@ -3,11 +3,11 @@
 ## Pipeline stages
 
 ```
- 1. Data generation       2. FoD extraction            3. Mass function        4. Evidence
-    (implemented)            (implemented)                assignment              combination
-                                                            (NOT implemented)       (NOT implemented)
+ 1. Data generation   2. FoD extraction   3. Focal sets    4. Mass function   5. Evidence
+    (implemented)        (implemented)       (implemented)     assignment         combination
+                                                               (NOT implemented)  (NOT implemented)
 
- data_utils/           ->  fod/                      ->  mass_functions/      ->  combiners/
+ data_utils/        -> fod/              -> focal_set/     -> mass_functions/ -> combiners/
 
  data/.../<run>/generated_dataset.json   experiments/runs/<run>/*_frame.json
 ```
@@ -35,15 +35,31 @@ Default implementation — `LanguageModelFodExtractor` (`llm.py`), registered as
 - Takes the list of model responses for one scenario (the `outputs` from a `DataSample`) and asks Gemini to synthesize a single **Universe of Discourse (UoD)** — the combined set of hypotheses implied across all the model outputs, since each model's response only covers a fractional piece of it.
 - Constrains Gemini to return a typed `FrameOfDiscernment` containing the elementary hypotheses.
 
-Driven by `scripts/pipeline_prototype.py`, which loads the latest generated dataset, resolves whichever extractor is configured, extracts a frame per sample, and writes each one to a timestamped run directory as `<scenario_id>_frame.json`.
+Driven by `scripts/run.py`, which loads the latest generated dataset, resolves whichever extractor is configured, and passes each extracted frame to the focal-set stage.
 
-## 3. Mass function assignment (planned)
+## 3. Focal-set creation
+
+Package: `src/concerted_abduction/focal_set/`. Base class: `FocalSetCreator` (`create_focal_sets(fod_output)`). Registry: `FocalSetRegistry`.
+
+Default implementation — `LanguageModelFocalSetCreator` (`llm.py`), registered as `"language_model_focal_set_creator"`:
+
+- Accepts an `FodOutput`, including its source-response mapping and frame of discernment.
+- Produces focal sets grouped by source. Each focal set contains one or more exact frame labels, a justification, and one or more verbatim excerpts from that source's text.
+- Checks that all input sources appear exactly once, every hypothesis belongs to the frame, and every citation occurs verbatim in the corresponding source text. Failures are recorded in `validation_errors` so experimental output is preserved for inspection.
+- Is configured under `[focal_set]` and invoked after FoD extraction by `scripts/run.py`.
+
+The runner writes `<scenario_id>_frame.json` and
+`<scenario_id>_focal_sets.json` into the same timestamped run directory. The
+`fod_extractor.output_dir` and `focal_set.output_dir` settings must therefore
+match.
+
+## 4. Mass function assignment (planned)
 
 Package: `src/concerted_abduction/mass_functions/` — currently empty, no base class or registry yet.
 
 Will assign a mass function per model: given a model's response and the UoD, distribute belief mass across subsets of the UoD's hypotheses (confidence-based, per the CLAUDE.md TODO). Expected to follow the same base-class + registry pattern as the stages above (see [extending.md](extending.md)).
 
-## 4. Evidence combination (planned)
+## 5. Evidence combination (planned)
 
 Package: `src/concerted_abduction/combiners/` — currently empty, no base class or registry yet.
 
@@ -54,7 +70,7 @@ Will combine per-model mass functions into a single belief distribution using De
 - **`src/concerted_abduction/types.py`** — the Pydantic dataset schema shared by generation and extraction. See [data_model.md](data_model.md).
 - **`src/concerted_abduction/utils/utils.py`** — `find_project_root()` (walks up from a file to the directory containing `.git`) and `load_prompt()` (reads a prompt file as text). Used throughout to resolve paths relative to the repo root regardless of where a script is invoked from.
 - **`src/config/settings.py`** — TOML + env-driven configuration, see [configuration.md](configuration.md).
-- **Registries** (`DataGeneratorRegistry`, `FodExtractorRegistry`) — name → class lookup so `config.toml` can select an implementation by string. See [extending.md](extending.md).
+- **Registries** (`DataGeneratorRegistry`, `FodExtractorRegistry`, `FocalSetRegistry`) — name → class lookup so `config.toml` can select an implementation by string. See [extending.md](extending.md).
 
 ## Not currently used
 
