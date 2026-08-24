@@ -5,7 +5,7 @@ that explores combining multiple language-model responses with
 Dempster-Shafer evidence theory. The first two pipeline stages work; mass
 assignment, evidence combination, and comprehensive tests are still planned.
 
-This guide gets you from a fresh checkout to a useful change. For the research
+For the research
 background, start with [the project overview](docs/overview.md). For current
 priorities, see [the roadmap](docs/roadmap.md).
 
@@ -84,17 +84,17 @@ uv run basedpyright
 ## 2. Start with components
 
 Most project features are implemented as **components**. A component is a
-small class with one job—for example, a hypothesis extractor turns a sample
-into a set of possible hypotheses. Each component type has:
+small class with one job—for example, an FoD extractor turns a sample into a
+frame of discernment. Each component type has:
 
 - A base class that defines the required method.
 - One or more concrete implementations.
 - A registry that gives each implementation a configuration name.
 
-The extractor package is a good first example:
+The FoD package is a good first example:
 
 ```text
-src/concerted_abduction/extractors/
+src/concerted_abduction/fod/
 ├── base.py       # Defines what every extractor must do.
 ├── llm.py        # Implements extraction with a language model.
 └── registry.py   # Maps names to extractor classes.
@@ -106,28 +106,28 @@ Subclass the relevant base class, implement its required method, and register
 the class under a unique name:
 
 ```python
-@ExtractorRegistry.register("my_extractor")
-class MyExtractor(HypothesisExtractor):
-    def generate_frame(self, sample: DataSample) -> ExtractorOutput:
+@FodExtractorRegistry.register("my_fod_extractor")
+class MyFodExtractor(FrameOfDiscernmentExtractor):
+    def generate_frame(self, sample: DataSample) -> FodOutput:
         # Convert the sample into the output required by this component type.
         ...
 ```
 
 The method signature is the component's contract. In this example, callers can
-use any registered extractor because every extractor accepts a `DataSample`
-and returns an `ExtractorOutput`.
+use any registered FoD extractor because every extractor accepts a `DataSample`
+and returns a `FodOutput`.
 
 ### Construct and invoke a component directly
 
 Direct construction is useful for prototypes and tests:
 
 ```python
-extractor = MyExtractor()
+extractor = MyFodExtractor()
 result = extractor.generate_frame(sample)
 ```
 
 Pass constructor dependencies explicitly. For example, the existing
-`LlmHypothesisExtractor` receives a `LanguageModel` object.
+`LanguageModelFodExtractor` receives a `LanguageModel` object.
 
 ### Construct a component from configuration
 
@@ -136,7 +136,7 @@ that supports this mode provides a `from_config()` class method:
 
 ```python
 # Resolve the configured implementation by its registry name.
-extractor_cls = ExtractorRegistry._get(cfg.type)
+extractor_cls = FodExtractorRegistry._get(cfg.type)
 
 # Construct it, including dependencies such as its language model and prompt.
 extractor = extractor_cls.from_config(cfg)
@@ -164,7 +164,7 @@ Generate a timestamped synthetic dataset:
 uv run python scripts/generate_data.py
 ```
 
-Then run hypothesis extraction against the newest generated dataset:
+Then run FoD extraction against the newest generated dataset:
 
 ```bash
 # Process one sample (the inexpensive default).
@@ -193,7 +193,7 @@ requests, which may incur usage costs.
 The notebook walks through one complete example:
 
 1. Create a `DataSample`.
-2. Implement the `HypothesisExtractor` interface with a `LanguageModel`
+2. Implement the `FrameOfDiscernmentExtractor` interface with a `LanguageModel`
    dependency.
 3. Register the implementation by name.
 4. Construct and invoke it directly with an explicit `LanguageModel`.

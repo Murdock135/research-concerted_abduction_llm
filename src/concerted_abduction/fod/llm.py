@@ -2,21 +2,20 @@ from typing import Self
 
 from concerted_abduction.llm.base import LanguageModel
 from concerted_abduction.llm.registry import LanguageModelRegistry
-from concerted_abduction.types import DataSample, ExtractorOutput, FrameOfDiscernment
+from concerted_abduction.types import DataSample, FodOutput, FrameOfDiscernment
 from concerted_abduction.utils.utils import load_prompt
 from config.settings import ComponentConfig
 
-from .base import HypothesisExtractor
-from .registry import ExtractorRegistry
+from .base import FrameOfDiscernmentExtractor
+from .registry import FodExtractorRegistry
 
 
-@ExtractorRegistry.register("llm_hypothesis_extractor")
-class LlmHypothesisExtractor(HypothesisExtractor):
-    """
-    LLM-based hypothesis extractor for generating universe of discourse.
+@FodExtractorRegistry.register("language_model_fod_extractor")
+class LanguageModelFodExtractor(FrameOfDiscernmentExtractor):
+    """Language-model-based frame-of-discernment extractor.
     
-    This extractor uses a language model to analyze multiple inputs and 
-    generate hypotheses for abductive reasoning. The system prompt can be 
+    This extractor uses a language model to analyze multiple inputs and
+    generate a frame for abductive reasoning. The system prompt can be
     customized to guide the LLM's output format and reasoning approach.
     
     Attributes:
@@ -28,15 +27,15 @@ class LlmHypothesisExtractor(HypothesisExtractor):
 
     @classmethod
     def from_config(cls, cfg: ComponentConfig) -> Self:
-        """Construct an extractor from application configuration."""
+        """Construct a frame-of-discernment extractor from configuration."""
         if cfg.llm is None:
             raise ValueError(
-                f"Extractor {cfg.type!r} requires a language model. "
+                f"FoD extractor {cfg.type!r} requires a language model. "
                 "Please specify one in the configuration file."
             )
         if cfg.prompt_path is None:
             raise ValueError(
-                f"Extractor {cfg.type!r} requires a prompt path. "
+                f"FoD extractor {cfg.type!r} requires a prompt path. "
                 "Please specify one in the configuration file."
             )
 
@@ -48,26 +47,8 @@ class LlmHypothesisExtractor(HypothesisExtractor):
 
         return cls(language_model=language_model)
 
-    def generate_frame(self, sample: DataSample) -> ExtractorOutput:
-        """Generate a frame of discernment from input using LLM.
-        Args:
-            A list of dicts of the form:
-                [
-                    {'source A': '<text>'},
-                    {'source B': '<text>'},
-                    ...,
-                ]
-        Returns:
-            The Frame of discernment aka universe of discourse (UoD) based on the inputs provided. The shape of the UoD
-            is- 
-                {
-                    'source_info': {
-                        'source A': <'text'>,
-                        'source B': <'text'>,
-                    }
-                    'uod': <'text'>
-                }
-        """
+    def generate_frame(self, sample: DataSample) -> FodOutput:
+        """Extract a frame of discernment from all responses in ``sample``."""
 
         prompt = (
             "Here are the inputs:\n"
@@ -84,7 +65,7 @@ class LlmHypothesisExtractor(HypothesisExtractor):
         if not isinstance(frame, FrameOfDiscernment):
             raise TypeError("Language model returned an unexpected output type")
 
-        return ExtractorOutput(
+        return FodOutput(
             hypotheses={output.source: output.response for output in sample.outputs},
             frame=frame,
         )

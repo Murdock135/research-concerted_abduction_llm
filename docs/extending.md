@@ -1,6 +1,6 @@
 # Extending: the registry pattern
 
-Both pluggable component types (data generators, hypothesis extractors) follow the same pattern: an abstract base class, a decorator-based registry, and lookup by string name from `config.toml`.
+Both pluggable component types (data generators, FoD extractors) follow the same pattern: an abstract base class, a decorator-based registry, and lookup by string name from `config.toml`.
 
 ## Anatomy
 
@@ -31,7 +31,7 @@ generator_cls = DataGeneratorRegistry.get(cfg.type)
 generator = generator_cls(language_model=cfg.llm.model_name, examples_path=cfg.examples_path)
 ```
 
-The same pattern applies to `src/concerted_abduction/extractors/` (`HypothesisExtractor`, `ExtractorRegistry`).
+The same pattern applies to `src/concerted_abduction/fod/` (`FrameOfDiscernmentExtractor`, `FodExtractorRegistry`).
 
 ## Adding a new data generator
 
@@ -40,9 +40,9 @@ The same pattern applies to `src/concerted_abduction/extractors/` (`HypothesisEx
 3. Make sure the module is imported somewhere on the import path before `DataGeneratorRegistry.get()` is called (registration happens at import/decoration time — an unimported module never registers).
 4. Point `config.toml`'s `[data_generator] type = "your_name"` at it, plus any `llm`/`prompt_path`/`examples_path` it needs.
 
-## Adding a new hypothesis extractor
+## Adding a new frame-of-discernment extractor
 
-Same steps, but subclass `HypothesisExtractor` and implement `generate_frame(self, sample)`, then decorate it with `@ExtractorRegistry.register("your_name")`.
+Same steps, but subclass `FrameOfDiscernmentExtractor` and implement `generate_frame(self, sample)`, then decorate it with `@FodExtractorRegistry.register("your_name")`.
 
 ## Mass functions and combiners (not yet started)
 

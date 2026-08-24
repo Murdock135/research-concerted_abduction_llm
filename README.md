@@ -12,7 +12,7 @@ Early-stage research code. Working today:
 
 - Synthetic dataset generation (multiple model outputs per scenario)
 - Typed dataset schema
-- LLM-based hypothesis extraction (universe of discourse)
+- LLM-based frame-of-discernment (FoD) extraction
 
 Not yet implemented:
 
@@ -45,13 +45,13 @@ No tests currently exist (`tests/` is empty).
 
 1. **Data generation** (`src/concerted_abduction/data_utils/data_generator.py`) — `CommonInputDataGenerator` calls Gemini with a structured JSON schema to produce synthetic scenarios where 3 named models (Model A/B/C) give different responses to the same input.
 2. **Dataset types** (`src/concerted_abduction/types.py`) — Pydantic models: `DataSample` (one scenario), `ModelOutput` (one model's response), `DataSet` (collection), `OverlapMatrix` (n×n similarity matrix).
-3. **Hypothesis extraction** (`src/concerted_abduction/extractors/`) — `HypothesisExtractor` abstract base; `LlmHypothesisExtractor` uses Gemini to read all model outputs and produce a universe of discourse (UoD). `ExtractorRegistry` lets components be registered and retrieved by name.
+3. **Frame-of-discernment extraction** (`src/concerted_abduction/fod/`) — `FrameOfDiscernmentExtractor` abstract base; `LanguageModelFodExtractor` uses Gemini to read all model outputs and produce a frame of discernment (FoD). `FodExtractorRegistry` lets components be registered and retrieved by name.
 4. **Planned:** mass function assignment, evidence combiners, and a `config.toml`-driven configuration layer.
 
 ## Project layout
 
 ```
-src/concerted_abduction/  Core library (types, extractors, data_utils, mass_functions, combiners)
+src/concerted_abduction/  Core library (types, fod, data_utils, mass_functions, combiners)
 prompts/                  Prompt templates, loaded via load_prompt()
 data/                     Example data and generated datasets
 scripts/                  Runnable entry points (generate_data.py, pipeline_prototype.py)

@@ -6,9 +6,9 @@ Mirrors the "Current TODO" section in CLAUDE.md, with more detail.
 
 - [x] Synthetic dataset generation (`CommonInputDataGenerator`, Gemini + structured JSON schema output)
 - [x] Typed dataset schema (`ModelOutput`, `DataSample`, `DataSet`)
-- [x] LLM-based hypothesis extraction / Universe of Discourse construction (`LlmHypothesisExtractor`)
+- [x] LLM-based frame-of-discernment extraction (`LanguageModelFodExtractor`)
 - [x] Structured frame output (`FrameOfDiscernment`, schema-constrained Gemini response)
-- [x] Registry pattern for pluggable components (`DataGeneratorRegistry`, `ExtractorRegistry`)
+- [x] Registry pattern for pluggable components (`DataGeneratorRegistry`, `FodExtractorRegistry`)
 - [x] `config.toml`-driven configuration: per-component LLM selection, prompt paths, example paths, output directories (`src/config/settings.py`)
 
 ## Not yet implemented

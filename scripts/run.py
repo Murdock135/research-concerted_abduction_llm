@@ -10,11 +10,11 @@ abductive-reasoning pipeline:
 
 Current state:
     This runner loads the most recently generated dataset and executes the
-    configured hypothesis-extraction implementation. Mass assignment and
+    configured frame-of-discernment extraction implementation. Mass assignment and
     evidence combination will be added here once those stages are implemented.
 
 TODO:
-    - [x] Refactor hypothesis extraction into concerted_abduction.extractors.
+    - [x] Refactor frame extraction into concerted_abduction.fod.
     - [x] Add configuration-driven component and LLM-provider construction.
     - [ ] Implement and integrate mass-function assignment.
     - [ ] Implement and integrate evidence combination using Dempster's rule.
@@ -40,8 +40,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from concerted_abduction.extractors import ExtractorRegistry, HypothesisExtractor
-from concerted_abduction.types import DataSet, ExtractorOutput
+from concerted_abduction.fod import FodExtractorRegistry, FrameOfDiscernmentExtractor
+from concerted_abduction.types import DataSet, FodOutput
 from concerted_abduction.utils.run_utils import (
     latest_run_dir,
     make_run_dir,
@@ -60,7 +60,7 @@ def positive_int(value: str) -> int:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run hypothesis extraction using the configured implementation."
+        description="Extract frames of discernment using the configured implementation."
     )
     sample_group = parser.add_mutually_exclusive_group()
     sample_group.add_argument(
@@ -84,24 +84,24 @@ def load_dataset(path: Path) -> DataSet:
     return DataSet.model_validate_json(path.read_text(encoding="utf-8"))
 
 
-def create_extractor(cfg: ComponentConfig) -> HypothesisExtractor:
+def create_extractor(cfg: ComponentConfig) -> FrameOfDiscernmentExtractor:
     """Resolve an extractor and construct it through its config adapter."""
-    extractor_cls = ExtractorRegistry._get(cfg.type)
+    extractor_cls = FodExtractorRegistry._get(cfg.type)
 
     from_config: Any = getattr(extractor_cls, 'from_config', None)
     if not callable(from_config):
         raise TypeError(f"Configured extractor {extractor_cls.__name__} does not provide `from_config()`.")
 
     extractor = from_config(cfg)
-    if not isinstance(extractor, HypothesisExtractor):
+    if not isinstance(extractor, FrameOfDiscernmentExtractor):
         raise TypeError(
             f"{extractor_cls.__name__}.from_config() returned "
-            f"{type(extractor).__name__}, expected a HypothesisExtractor"
+            f"{type(extractor).__name__}, expected a FrameOfDiscernmentExtractor"
         )
     return extractor
 
 
-def save_frame(run_dir: Path, sample_id: str, result: ExtractorOutput) -> None:
+def save_frame(run_dir: Path, sample_id: str, result: FodOutput) -> None:
     output_path = run_dir / f"{sample_id}_frame.json"
     output_path.write_text(
         json.dumps(result.model_dump(), ensure_ascii=False, indent=4),
@@ -115,7 +115,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     env = ENVSettings()
     # Pydantic Settings supplies these required fields from TOML at runtime.
     settings = ConcertedAbductionSettings()  # pyright: ignore[reportCallIssue]
-    extractor_cfg = settings.hypothesis_extractor
+    extractor_cfg = settings.fod_extractor
 
     if (
         extractor_cfg.llm is not None

@@ -3,11 +3,11 @@
 ## Pipeline stages
 
 ```
- 1. Data generation       2. Hypothesis extraction     3. Mass function        4. Evidence
+ 1. Data generation       2. FoD extraction            3. Mass function        4. Evidence
     (implemented)            (implemented)                assignment              combination
                                                             (NOT implemented)       (NOT implemented)
 
- data_utils/           ->  extractors/               ->  mass_functions/      ->  combiners/
+ data_utils/           ->  fod/                      ->  mass_functions/      ->  combiners/
 
  data/.../<run>/generated_dataset.json   experiments/runs/<run>/*_frame.json
 ```
@@ -26,11 +26,11 @@ Default implementation — `CommonInputDataGenerator` (`data_generator.py`), reg
 
 Driven by `scripts/generate_data.py`, which resolves whichever generator is configured and writes the result to a timestamped directory under the configured output directory.
 
-## 2. Hypothesis extraction
+## 2. Frame-of-discernment extraction
 
-Package: `src/concerted_abduction/extractors/`. Base class: `HypothesisExtractor` (`generate_frame(sample)`). Registry: `ExtractorRegistry`.
+Package: `src/concerted_abduction/fod/`. Base class: `FrameOfDiscernmentExtractor` (`generate_frame(sample)`). Registry: `FodExtractorRegistry`.
 
-Default implementation — `LlmHypothesisExtractor` (`llm.py`), registered as `"llm_hypothesis_extractor"`:
+Default implementation — `LanguageModelFodExtractor` (`llm.py`), registered as `"language_model_fod_extractor"`:
 
 - Takes the list of model responses for one scenario (the `outputs` from a `DataSample`) and asks Gemini to synthesize a single **Universe of Discourse (UoD)** — the combined set of hypotheses implied across all the model outputs, since each model's response only covers a fractional piece of it.
 - Constrains Gemini to return a typed `FrameOfDiscernment` containing the elementary hypotheses.
@@ -54,7 +54,7 @@ Will combine per-model mass functions into a single belief distribution using De
 - **`src/concerted_abduction/types.py`** — the Pydantic dataset schema shared by generation and extraction. See [data_model.md](data_model.md).
 - **`src/concerted_abduction/utils/utils.py`** — `find_project_root()` (walks up from a file to the directory containing `.git`) and `load_prompt()` (reads a prompt file as text). Used throughout to resolve paths relative to the repo root regardless of where a script is invoked from.
 - **`src/config/settings.py`** — TOML + env-driven configuration, see [configuration.md](configuration.md).
-- **Registries** (`DataGeneratorRegistry`, `ExtractorRegistry`) — name → class lookup so `config.toml` can select an implementation by string. See [extending.md](extending.md).
+- **Registries** (`DataGeneratorRegistry`, `FodExtractorRegistry`) — name → class lookup so `config.toml` can select an implementation by string. See [extending.md](extending.md).
 
 ## Not currently used
 

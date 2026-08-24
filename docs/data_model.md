@@ -65,7 +65,7 @@ Note: the example file uses `id`, but the live `DataSample` schema field is `sce
 | `data/synthetic/examples/common_input/v0.json` | Few-shot examples fed to the data generator's prompt |
 | `<data_generator.output_dir>/<run>/generated_dataset.json` | Output of `scripts/generate_data.py` |
 | `data/synthetic/generated/common_input/v0.json` | An earlier/alternate generated dataset |
-| `<hypothesis_extractor.output_dir>/<run>/<scenario_id>_frame.json` | Structured hypothesis-extraction output, one file per scenario |
+| `<fod_extractor.output_dir>/<run>/<scenario_id>_frame.json` | Structured FoD-extraction output, one file per scenario |
 
 ---
 Next: [configuration.md](configuration.md) — how to control which LLM/prompt/examples each component uses.

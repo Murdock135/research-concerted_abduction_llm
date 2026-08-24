@@ -52,7 +52,7 @@ Use four separate stages:
 3. **Estimate the reliability of the source.**
 4. **Reserve unsupported mass for ignorance.**
 
-Do not ask the current hypothesis extractor to assign masses. Its prompt explicitly says to return only elementary, canonical hypotheses and not to rank them or assign probabilities or belief masses. prompts/extractors/hypothesis/v0.txt:5-12
+Do not ask the current FoD extractor to assign masses. Its prompt explicitly says to return only elementary, canonical hypotheses and not to rank them or assign probabilities or belief masses. prompts/fod/v0.txt:5-12
 
 ### Stage A: Extract source-specific claims
 
@@ -536,6 +536,6 @@ Start with transparent linguistic rules, calibrate them on labeled data, preserv
 
 * ✅ `pwd && printf '%s\n' '--- AGENTS ---' && find .. -name AGENTS.md -print && printf '%s\n' '--- FILES ---' && rg --files -g '!**/.git/**' | sed -n '1,160p'`
 * ✅ `rg -n -i "belief|mass|source response|response|dempster|shafer|confidence|reliab|hypothes" README.md docs src scripts todo.md prompts data/synthetic/examples/common_input/v0.json`
-* ✅ `nl -ba docs/overview.md | sed -n '9,18p'; printf '\n--- architecture ---\n'; nl -ba docs/architecture.md | sed -n '29,52p'; printf '\n--- types ---\n'; nl -ba src/concerted_abduction/types.py | sed -n '1,75p'; printf '\n--- roadmap ---\n'; nl -ba docs/roadmap.md | sed -n '12,20p'; printf '\n--- prompt ---\n'; nl -ba prompts/extractors/hypothesis/v0.txt | sed -n '1,22p'`
+* ✅ `nl -ba docs/overview.md | sed -n '9,18p'; printf '\n--- architecture ---\n'; nl -ba docs/architecture.md | sed -n '29,52p'; printf '\n--- types ---\n'; nl -ba src/concerted_abduction/types.py | sed -n '1,75p'; printf '\n--- roadmap ---\n'; nl -ba docs/roadmap.md | sed -n '12,20p'; printf '\n--- prompt ---\n'; nl -ba prompts/fod/v0.txt | sed -n '1,22p'`
 
 No repository files were changed, so there was no commit or pull request to create.

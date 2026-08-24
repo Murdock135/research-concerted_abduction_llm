@@ -31,23 +31,23 @@ output_dir = "data"
 provider = "google_genai"
 model = "gemini-2.5-flash"
 
-[hypothesis_extractor]
-type = "llm_hypothesis_extractor"
-prompt_path = "prompts/extractors/hypothesis/v0.txt"
+[fod_extractor]
+type = "language_model_fod_extractor"
+prompt_path = "prompts/fod/v0.txt"
 output_dir = "experiments/runs"
 
-[hypothesis_extractor.llm]
+[fod_extractor.llm]
 provider = "google_genai"
 model = "gemini-2.5-flash"
 ```
 
-This is the content of `src/config/default_config.toml`. `hypothesis_extractor` has no `examples_path` set by default.
+This is the content of `src/config/default_config.toml`. `fod_extractor` has no `examples_path` set by default.
 
 ### `ComponentConfig` fields
 
 | field | type | meaning |
 |---|---|---|
-| `type` | `str` | Registry name of the implementation to use (looked up via `DataGeneratorRegistry.get(type)` / `ExtractorRegistry.get(type)`) |
+| `type` | `str` | Registry name of the implementation to use (looked up via `DataGeneratorRegistry._get(type)` / `FodExtractorRegistry._get(type)`) |
 | `output_dir` | `Path` | Where this component writes its output |
 | `llm` | `LLMSetting \| None` | `{provider, model, temperature?}` — which LLM this component calls |
 | `prompt_path` | `Path \| None` | Prompt file loaded via `load_prompt()` |
@@ -60,11 +60,11 @@ Relative paths in `config.toml` (including `output_dir`) are resolved against th
 To use a different model, prompt, or implementation for a component, create a `config.toml` at the project root with only the keys you want to override — it's deep-merged on top of `default_config.toml`:
 
 ```toml
-[hypothesis_extractor.llm]
+[fod_extractor.llm]
 model = "gemini-2.5-pro"
 ```
 
-This is enough to switch just the hypothesis extractor's model while leaving everything else (data generator config, prompt paths, etc.) at their defaults.
+This is enough to switch just the FoD extractor's model while leaving everything else (data generator config, prompt paths, etc.) at their defaults.
 
 ## Accessing settings in code
 
@@ -74,7 +74,7 @@ from config.settings import ENVSettings, ConcertedAbductionSettings
 env = ENVSettings()  # populates os.environ["GEMINI_API_KEY"]
 settings = ConcertedAbductionSettings()
 gen_cfg = settings.data_generator
-extractor_cfg = settings.hypothesis_extractor
+extractor_cfg = settings.fod_extractor
 ```
 
 ---

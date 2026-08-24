@@ -8,11 +8,11 @@ output_dir = "data/synthetic/generated/common_input/"
 provider = "google_genai"
 model = "gemini-2.5-flash"
 
-[hypothesis_extractor]
-type = "llm_hypothesis_extractor"
-prompt_path = "prompts/extractors/hypothesis/v0.txt"
+[fod_extractor]
+type = "language_model_fod_extractor"
+prompt_path = "prompts/fod/v0.txt"
 output_dir = "experiments/runs"
 
-[hypothesis_extractor.llm]
+[fod_extractor.llm]
 provider = "google_genai"
 model = "gemini-2.5-flash"

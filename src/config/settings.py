@@ -2,7 +2,7 @@
 Settings.py
 
 Loads environment variables and TOML-based configuration for pipeline
-components (data generator, hypothesis extractor, ...). Configuration is
+components (data generator, frame-of-discernment extractor, ...). Configuration is
 layered: bundled defaults in config/default_config.toml, optionally
 overridden by a config.toml at the project root.
 """
@@ -76,7 +76,7 @@ class ConcertedAbductionSettings(BaseSettings):
     )
 
     data_generator: ComponentConfig
-    hypothesis_extractor: ComponentConfig
+    fod_extractor: ComponentConfig
 
     @classmethod
     def settings_customise_sources(

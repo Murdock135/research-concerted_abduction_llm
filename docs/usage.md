@@ -26,8 +26,8 @@ python scripts/pipeline_prototype.py
 ```
 
 - Loads `generated_dataset.json` from the latest run under `data_generator.output_dir`.
-- For each sample, resolves the configured `hypothesis_extractor` implementation via `ExtractorRegistry.get(cfg.type)` (default: `LlmHypothesisExtractor`, registered as `"llm_hypothesis_extractor"`) and runs it over that sample's model outputs to produce a Universe of Discourse.
-- Writes `<hypothesis_extractor.output_dir>/<run>/<scenario_id>_frame.json` for each sample.
+- For each sample, resolves the configured `fod_extractor` implementation via `FodExtractorRegistry._get(cfg.type)` (default: `LanguageModelFodExtractor`, registered as `"language_model_fod_extractor"`) and runs it over that sample's model outputs to produce a frame of discernment.
+- Writes `<fod_extractor.output_dir>/<run>/<scenario_id>_frame.json` for each sample.
 - Stops there today — mass function assignment and evidence combination are not implemented, so this does not yet produce a final combined belief distribution. See [roadmap.md](roadmap.md).
 
 ## Tests

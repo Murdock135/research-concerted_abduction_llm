@@ -10,13 +10,13 @@ Implementations register themselves by name through a decorator-based
 
 Components can be constructed in two ways:
 
-1. Directly, for example `LlmHypothesisExtractor(language_model)`.
+1. Directly, for example `LanguageModelFodExtractor(language_model)`.
 2. From TOML configuration, by looking up the configured implementation and
    asking it to construct itself:
 
 ```python
 # Look up the registered component class using the name from configuration.
-extractor_cls = ExtractorRegistry._get(cfg.type)
+extractor_cls = FodExtractorRegistry._get(cfg.type)
 
 # Let the selected implementation resolve its dependencies and create itself.
 extractor = extractor_cls.from_config(cfg)

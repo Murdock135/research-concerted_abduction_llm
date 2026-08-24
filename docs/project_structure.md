@@ -14,10 +14,10 @@
 │   │   │   ├── base.py               DataGenerator ABC
 │   │   │   ├── registry.py           DataGeneratorRegistry
 │   │   │   └── data_generator.py     CommonInputDataGenerator ("common_input")
-│   │   ├── extractors/              Hypothesis extraction component
-│   │   │   ├── base.py               HypothesisExtractor ABC
-│   │   │   ├── registry.py           ExtractorRegistry
-│   │   │   └── llm.py                LlmHypothesisExtractor ("llm_hypothesis_extractor")
+│   │   ├── fod/                     Frame-of-discernment extraction component
+│   │   │   ├── base.py               FrameOfDiscernmentExtractor ABC
+│   │   │   ├── registry.py           FodExtractorRegistry
+│   │   │   └── llm.py                LanguageModelFodExtractor ("language_model_fod_extractor")
 │   │   ├── mass_functions/          EMPTY — planned, see roadmap.md
 │   │   ├── combiners/               EMPTY — planned, see roadmap.md
 │   │   ├── core/                    EMPTY
@@ -34,7 +34,7 @@
 │
 ├── prompts/                        System prompts for LLM-driven components
 │   ├── data_generators/common_input/v0.txt
-│   └── extractors/hypothesis/v0.txt
+│   └── fod/v0.txt
 │
 ├── data/
 │   └── synthetic/
