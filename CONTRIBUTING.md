@@ -132,7 +132,66 @@ Pass constructor dependencies explicitly. For example, the existing
 ### Construct a component from configuration
 
 Runnable scripts select implementations by their registered names. A component
-that supports this mode provides a `from_config()` class method:
+does not inherit configuration-based construction from
+`FrameOfDiscernmentExtractor`: the developer must implement a `from_config()`
+class method on each component that should support it.
+
+The current runner passes a parsed `ComponentConfig` object to `from_config()`.
+The method does not read or infer directly from TOML; its job is to validate
+the settings it needs and construct the component from them.
+
+If `ComponentConfig` does not represent the settings required by a new
+component, defining another Pydantic model is only the first step. You must
+also update the corresponding field on `ConcertedAbductionSettings` (or add
+other configuration-dispatch logic) so Pydantic parses that TOML section into
+the new model before the runner calls `from_config()`. Otherwise, the runner
+continues to supply a `ComponentConfig`, and unsupported TOML fields may be
+ignored.
+
+> [!NOTE]
+> **What is `ComponentConfig`?** It is the Pydantic model for one component's
+> TOML section, including its registry `type`, output directory, optional LLM
+> settings, prompt path, and examples path. Find its definition in
+> [`src/config/settings.py`](src/config/settings.py), and see
+> [`docs/configuration.md`](docs/configuration.md) for the corresponding TOML
+> shape, configuration layering, and path-resolution behavior.
+
+For example, a language-model-backed `MyFodExtractor` could use this skeleton:
+
+```python
+from typing import Self
+
+from concerted_abduction.llm.base import LanguageModel
+from concerted_abduction.llm.registry import LanguageModelRegistry
+from concerted_abduction.utils.utils import load_prompt
+from config.settings import ComponentConfig
+
+
+class MyFodExtractor(FrameOfDiscernmentExtractor):
+    def __init__(self, language_model: LanguageModel) -> None:
+        self.language_model = language_model
+
+    @classmethod
+    def from_config(cls, cfg: ComponentConfig) -> Self:
+        if cfg.llm is None:
+            raise ValueError(f"FoD extractor {cfg.type!r} requires an llm section")
+        if cfg.prompt_path is None:
+            raise ValueError(f"FoD extractor {cfg.type!r} requires prompt_path")
+
+        language_model = LanguageModelRegistry.create(
+            provider=cfg.llm.provider,
+            model=cfg.llm.model_name,
+            system_prompt=load_prompt(cfg.prompt_path),
+        )
+        return cls(language_model=language_model)
+
+    # Implement generate_frame() as shown above.
+```
+
+Components without external dependencies can simply validate any settings
+they use and return `cls()` from `from_config()`.
+
+The runner then uses that method as follows:
 
 ```python
 # Resolve the configured implementation by its registry name.
@@ -144,6 +203,9 @@ extractor = extractor_cls.from_config(cfg)
 # Invoke it through the common component interface.
 result = extractor.generate_frame(sample)
 ```
+
+If `from_config()` is absent, `scripts/run.py` raises `TypeError`. Direct
+construction remains available and does not require this method.
 
 Registration happens when Python imports the implementation module. If a new
 component cannot be found, ensure its module is imported by the package's
