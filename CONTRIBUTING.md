@@ -19,29 +19,41 @@ shows the files a contributor is most likely to touch:
 ├── src/
 │   ├── concerted_abduction/          # Main Python package
 │   │   ├── types.py
-│   │   ├── data_utils/               # DATA GENERATOR (SYNTHETIC)
+│   │   ├── core/                     # Shared pipeline primitives
+│   │   ├── data_utils/               # Synthetic data generation
 │   │   │   ├── base.py
 │   │   │   ├── registry.py
 │   │   │   └── data_generator.py
-│   │   ├── extractors/               # COMPONENTS used for extracting info from text
+│   │   ├── fod/                      # Frame-of-discernment extraction
 │   │   │   ├── base.py
 │   │   │   ├── registry.py
 │   │   │   └── llm.py
-│   │   ├── llm/                      # MODULE FOR INVOKING LANGUAGE MODELS
+│   │   ├── focal_set/                # Focal-set extraction
+│   │   │   ├── base.py
+│   │   │   ├── registry.py
+│   │   │   └── llm.py
+│   │   ├── llm/                      # Language-model provider adapters
 │   │   │   ├── base.py
 │   │   │   ├── registry.py
 │   │   │   └── google.py
-│   │   └── utils/                    # HELPERS LIVE HERE
+│   │   ├── utils/                    # Prompt loading and runner helpers
+│   │   │   ├── run_utils.py
+│   │   │   └── utils.py
+│   │   ├── mass_functions/           # Placeholder for mass assignment
+│   │   └── combiners/                # Placeholder for evidence combination
 │   └── config/
 │       ├── settings.py               # Loads environment and TOML configuration
 │       └── default_config.toml       # Shared component defaults
 ├── scripts/
 │   ├── generate_data.py              # Creates a timestamped synthetic dataset
 │   └── run.py                        # Runs extraction on the newest dataset
-├── prompts/                          # Versioned prompts; keep long prompts out of code
+├── prompts/                          # Versioned prompts for each LLM-backed component
 ├── data/synthetic/examples/          # Few-shot examples used for data generation
+├── experiments/runs/                 # Generated pipeline results (Git-ignored)
+├── notebooks/                        # Exploratory notebooks and quickstarts
 ├── docs/                             # Architecture, data model, ADRs, and proposals
-├── tests/                            # Test location; currently no test suite
+├── tests/                            # Automated tests
+├── integrations/                     # Unused provider placeholders
 ├── pyproject.toml                    # Package metadata, dependencies, and type-check config
 └── config.toml                       # Optional local overrides; absent by default
 ```
