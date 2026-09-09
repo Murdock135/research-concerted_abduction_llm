@@ -11,8 +11,7 @@ priorities, see [the roadmap](docs/roadmap.md).
 
 ## Project structure
 
-The repository is organized around replaceable pipeline components. This tree
-shows the files a contributor is most likely to touch:
+The file tree:
 
 ```text
 .
