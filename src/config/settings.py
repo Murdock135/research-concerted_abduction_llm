@@ -78,6 +78,7 @@ class ConcertedAbductionSettings(BaseSettings):
     data_generator: ComponentConfig
     fod_extractor: ComponentConfig
     focal_set: ComponentConfig
+    bpa: ComponentConfig
 
     @classmethod
     def settings_customise_sources(

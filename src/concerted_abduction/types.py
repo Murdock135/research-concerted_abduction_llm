@@ -1,4 +1,7 @@
-from pydantic import BaseModel, Field
+from math import fsum, isclose
+from typing import Self
+
+from pydantic import BaseModel, Field, model_validator
 
 import pandas as pd
 import numpy as np
@@ -99,3 +102,45 @@ class FocalSetOutput(BaseModel):
             "An empty list means semantic validation passed."
         ),
     )
+
+
+class FocalSetMass(BaseModel):
+    """Mass committed to a non-empty subset, not split across its members."""
+
+    hypotheses: list[str] = Field(min_length=1)
+    mass: float = Field(ge=0, le=1, allow_inf_nan=False)
+    justification: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_hypotheses(self) -> Self:
+        if any(not h.strip() for h in self.hypotheses):
+            raise ValueError("Hypotheses must not be blank")
+        if len(set(self.hypotheses)) != len(self.hypotheses):
+            raise ValueError("Duplicate hypotheses in a mass subset")
+        return self
+
+
+class SourceBpa(BaseModel):
+    source: str = Field(min_length=1)
+    masses: list[FocalSetMass] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def valid_distribution(self) -> Self:
+        subsets = [frozenset(entry.hypotheses) for entry in self.masses]
+        if len(set(subsets)) != len(subsets):
+            raise ValueError("Duplicate mass subsets")
+        if not isclose(fsum(entry.mass for entry in self.masses), 1.0,
+                       rel_tol=0, abs_tol=1e-6):
+            raise ValueError("Masses for each source must sum to one (tolerance 1e-6)")
+        return self
+
+
+class BpaOutput(BaseModel):
+    sources: list[SourceBpa] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_sources(self) -> Self:
+        sources = [entry.source for entry in self.sources]
+        if len(set(sources)) != len(sources):
+            raise ValueError("Duplicate BPA sources")
+        return self
