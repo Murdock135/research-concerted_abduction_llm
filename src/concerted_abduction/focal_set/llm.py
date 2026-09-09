@@ -12,7 +12,22 @@ from .registry import FocalSetRegistry
 
 @FocalSetRegistry.register("language_model_focal_set_creator")
 class LanguageModelFocalSetCreator(FocalSetCreator):
-    """Use a language model to derive cited focal sets from an FoD output."""
+    """Use a language model to derive focal sets for each evidence source.
+
+    Given a ``FodOutput`` containing a frame of discernment and source texts,
+    request a structured ``FocalSetOutput`` with subsets of frame hypotheses,
+    justifications, and supporting verbatim citations grouped by source.
+
+    Check that each input source appears exactly once, all returned hypotheses
+    belong to the frame, and citations occur in their respective source texts.
+    Record these validation issues in the returned output's
+    ``validation_errors`` rather than raising an exception for them.
+
+    Attributes:
+        language_model: Configured language-model implementation used to
+            generate focal sets. When constructed via ``from_config``, its
+            system prompt is loaded from the configured prompt path.
+    """
 
     def __init__(self, language_model: LanguageModel) -> None:
         self.language_model = language_model
@@ -55,11 +70,20 @@ class LanguageModelFocalSetCreator(FocalSetCreator):
         expected_sources = set(fod_output.hypotheses)
         returned_sources = [source_result.source for source_result in result.sources]
 
-        if len(returned_sources) != len(set(returned_sources)):
-            errors.append("Focal-set output contains duplicate sources")
-        if set(returned_sources) != expected_sources:
+        sources_unique = len(returned_sources) == len(set(returned_sources))
+        sources_match = set(returned_sources) == expected_sources
+        source_details = (
+            f"Expected sources: {sorted(expected_sources)}\n"
+            f"Returned sources: {returned_sources}"
+        )
+        if not sources_unique:
             errors.append(
-                "Focal-set output sources must exactly match the FoD output sources"
+                f"Focal-set output contains duplicate sources\n{source_details}"
+            )
+        if not sources_match:
+            errors.append(
+                "Focal-set output sources must exactly match the FoD output sources\n"
+                f"{source_details}"
             )
 
         frame = set(fod_output.frame.frame)
