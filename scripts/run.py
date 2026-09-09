@@ -11,14 +11,14 @@ abductive-reasoning pipeline:
 
 Current state:
     This runner loads the most recently generated dataset and executes the
-    configured frame-of-discernment extractor and focal-set creator. Mass
-    assignment and evidence combination will be added once implemented.
+    configured frame-of-discernment extractor, focal-set creator, and BPA
+    assigner. Evidence combination remains to be implemented.
 
 TODO:
     - [x] Refactor frame extraction into concerted_abduction.fod.
     - [x] Integrate focal-set creation.
     - [x] Add configuration-driven component and LLM-provider construction.
-    - [ ] Implement and integrate mass-function assignment.
+    - [x] Implement and integrate mass-function assignment.
     - [ ] Implement and integrate evidence combination using Dempster's rule.
     - [ ] Add automated tests for the complete pipeline.
 
@@ -42,9 +42,10 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from concerted_abduction.bpa import BpaAssigner, BpaRegistry
 from concerted_abduction.focal_set import FocalSetCreator, FocalSetRegistry
 from concerted_abduction.fod import FodExtractorRegistry, FrameOfDiscernmentExtractor
-from concerted_abduction.types import DataSet, FocalSetOutput, FodOutput
+from concerted_abduction.types import BpaOutput, DataSet, FocalSetOutput, FodOutput
 from concerted_abduction.utils.run_utils import (
     latest_run_dir,
     make_run_dir,
@@ -63,7 +64,7 @@ def positive_int(value: str) -> int:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run FoD extraction and focal-set creation."
+        description="Run FoD extraction, focal-set creation, and BPA assignment."
     )
     sample_group = parser.add_mutually_exclusive_group()
     sample_group.add_argument(
@@ -124,6 +125,23 @@ def create_focal_set_creator(cfg: ComponentConfig) -> FocalSetCreator:
     return creator
 
 
+def create_bpa_assigner(cfg: ComponentConfig) -> BpaAssigner:
+    assigner_cls = BpaRegistry._get(cfg.type)
+    from_config: Any = getattr(assigner_cls, "from_config", None)
+    if not callable(from_config):
+        raise TypeError(f"{assigner_cls.__name__} does not provide from_config()")
+    assigner = from_config(cfg)
+    if not isinstance(assigner, BpaAssigner):
+        raise TypeError("from_config() must return a BpaAssigner")
+    return assigner
+
+
+def save_bpa(run_dir: Path, sample_id: str, result: BpaOutput) -> None:
+    (run_dir / f"{sample_id}_bpa.json").write_text(
+        result.model_dump_json(indent=4), encoding="utf-8"
+    )
+
+
 def save_frame(run_dir: Path, sample_id: str, result: FodOutput) -> None:
     output_path = run_dir / f"{sample_id}_frame.json"
     output_path.write_text(
@@ -150,16 +168,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     settings = ConcertedAbductionSettings()  # pyright: ignore[reportCallIssue]
     extractor_cfg = settings.fod_extractor
     focal_set_cfg = settings.focal_set
+    bpa_cfg = settings.bpa
 
-    if extractor_cfg.output_dir != focal_set_cfg.output_dir:
+    if len({cfg.output_dir for cfg in (extractor_cfg, focal_set_cfg, bpa_cfg)}) != 1:
         raise ValueError(
-            "fod_extractor.output_dir and focal_set.output_dir must match so "
+            "fod_extractor, focal_set, and bpa output_dir must match so "
             "pipeline artifacts are written to the same run directory"
         )
 
     uses_google = any(
         cfg.llm is not None and cfg.llm.provider == "google_genai"
-        for cfg in (extractor_cfg, focal_set_cfg)
+        for cfg in (extractor_cfg, focal_set_cfg, bpa_cfg)
     )
     if uses_google and not env.gemini_api_key:
         raise EnvironmentError("GEMINI_API_KEY was not found in the environment")
@@ -174,6 +193,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     extractor = create_extractor(extractor_cfg)
     focal_set_creator = create_focal_set_creator(focal_set_cfg)
+    bpa_assigner = create_bpa_assigner(bpa_cfg)
     samples = dataset.samples if args.all else dataset.samples[: args.num_samples]
 
     run_dir = make_run_dir(extractor_cfg.output_dir)
@@ -192,6 +212,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "provider": focal_set_cfg.llm.provider if focal_set_cfg.llm else None,
             "model": focal_set_cfg.llm.model_name if focal_set_cfg.llm else None,
         },
+        bpa=bpa_cfg.model_dump(mode="json"),
         sample_count=len(samples),
         smoke_test=not args.all,
     )
@@ -205,8 +226,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(
                 f"Warning: {sample.scenario_id} focal sets failed "
                 f"{len(focal_set_result.validation_errors)} validation check(s); "
-                "the result was preserved"
+                "the result was preserved; continuing to BPA assignment"
             )
+        bpa_result = bpa_assigner.assign_masses(fod_result, focal_set_result)
+        save_bpa(run_dir, sample.scenario_id, bpa_result)
         print(f"Processed {sample.scenario_id} -> {run_dir}")
 
     return 0
