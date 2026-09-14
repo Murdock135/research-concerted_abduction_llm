@@ -3,7 +3,10 @@ from typing import Self
 
 from concerted_abduction.llm.base import LanguageModel
 from concerted_abduction.llm.registry import LanguageModelRegistry
-from concerted_abduction.types import BpaOutput, FocalSetOutput, FodOutput
+
+from concerted_abduction.types import (
+    BpaOutput, FocalSetOutput, FodOutput, SourceBpa, SourceMassResponse,
+)
 from concerted_abduction.utils.utils import load_prompt
 from config.settings import ComponentConfig
 
@@ -41,65 +44,58 @@ class LanguageModelBpaAssigner(BpaAssigner):
         self, fod_output: FodOutput, focal_set_output: FocalSetOutput
     ) -> BpaOutput:
         """Ask the LLM for per-source masses, then validate its assignments."""
-        frame = frozenset(fod_output.frame.frame)
-        sources = set(fod_output.hypotheses.keys())
 
-        # Each source can receive mass on its extracted focal sets or on the
-        # full frame (ignorance). Frozensets make hypothesis order irrelevant
-        # and allow these groups to be stored inside another set.
-        # A source without extracted focal sets can still receive full ignorance.
-        allowed: dict[str, set[frozenset[str]]] = {
-            source: {frame} for source in sources
-        }
-        for entry in focal_set_output.sources:
-            # Start a new source with the full frame, then add its focal sets.
-            allowed.setdefault(entry.source, {frame}).update(
-                frozenset(focal.hypotheses) for focal in entry.focal_sets
+        frame_labels = fod_output.frame.frame
+        frame = frozenset(frame_labels)
+
+        if not frame or len(frame) != len(frame_labels) or any(
+            not label.strip() for label in frame_labels
+        ):
+            raise ValueError("Frame must contain unique, non-blank hypotheses")
+        if not fod_output.hypotheses:
+            raise ValueError("BPA requires at least one input source")
+
+        source_bpas: list[SourceBpa] = []
+        for source, response in fod_output.hypotheses.items():
+            focal_sets = [
+                focal
+                for entry in focal_set_output.sources if entry.source == source
+                for focal in entry.focal_sets
+                if focal.hypotheses and frozenset(focal.hypotheses) <= frame
+            ]
+            allowed = {frozenset(focal.hypotheses) for focal in focal_sets}
+            allowed.add(frame)
+
+            prompt = (
+                "Assign a basic probability assignment to this source's evidence. "
+                "Return masses containing hypotheses, mass, and justification. "
+                "Use only supplied focal sets or the full frame; omitted subsets "
+                "have zero mass. Masses must sum to one.\n"
+                + json.dumps({
+                    "source": source,
+                    "response": response,
+                    "frame": frame_labels,
+                    "focal_sets": [focal.model_dump() for focal in focal_sets],
+                }, ensure_ascii=False, indent=2)
             )
-
-        # Include original evidence and extracted groups, leaving upstream
-        # validation diagnostics out of the LLM context.
-        prompt = (
-            "Assign per-source basic probability assignments to this evidence:\n"
-            + json.dumps(
-                {
-                    "fod_output": fod_output.model_dump(),
-                    "focal_sets": [
-                        entry.model_dump() for entry in focal_set_output.sources
-                    ],
-                },
-                ensure_ascii=False,
-                indent=2,
+            result = self.language_model.generate(
+                prompt, output_schema=SourceMassResponse
             )
-        )
-
-        # The LLM chooses the masses; Python checks the resulting distribution.
-        result = self.language_model.generate(prompt, output_schema=BpaOutput)
-        if not isinstance(result, BpaOutput):
-            raise TypeError("Language model returned an unexpected BPA output type")
-
-        # Apply mass bounds, per-source totals, and uniqueness checks even when
-        # the provider returns a preconstructed model. Do not normalize masses.
-        result = BpaOutput.model_validate(result.model_dump())
-
-        # Check source coverage and group membership against this scenario;
-        # these constraints require context beyond the output schema alone.
-        if {entry.source for entry in result.sources} != set(sources):
-            raise ValueError("BPA sources must exactly match input sources")
-
-        for entry in result.sources:
-            for mass in entry.masses:
+            if not isinstance(result, SourceMassResponse):
+                raise TypeError("Language model returned an unexpected BPA output type")
+            # Revalidate even if a provider returns a preconstructed model.
+            result = SourceMassResponse.model_validate(result.model_dump())
+            for mass in result.masses:
                 subset = frozenset(mass.hypotheses)
-
                 if not subset <= frame:
+                    raise ValueError(f"BPA subset for {source!r} is outside the frame")
+                if subset not in allowed:
                     raise ValueError(
-                        f"BPA subset for {entry.source!r} is outside the frame"
-                    )
-
-                if subset not in allowed[entry.source]:
-                    raise ValueError(
-                        f"BPA subset for {entry.source!r} must be an input focal "
+                        f"BPA subset for {source!r} must be an input focal "
                         "set or the full frame"
                     )
 
-        return result
+            # Python owns the source; SourceBpa validates duplicates and totals.
+            source_bpas.append(SourceBpa(source=source, masses=result.masses))
+
+        return BpaOutput(sources=source_bpas)

@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest.mock import Mock, patch
 
@@ -6,7 +7,7 @@ from pydantic import ValidationError
 from concerted_abduction.bpa import BpaRegistry, LanguageModelBpaAssigner
 from concerted_abduction.types import (
     BpaOutput, FocalSet, FocalSetMass, FocalSetOutput, FodOutput,
-    FrameOfDiscernment, SourceBpa, SourceFocalSets,
+    FrameOfDiscernment, SourceBpa, SourceFocalSets, SourceMassResponse,
 )
 from config.settings import ConcertedAbductionSettings
 
@@ -26,14 +27,17 @@ class BpaTests(unittest.TestCase):
             FocalSet(hypotheses=["x"], justification="Support", citations=["Probably x"])
         ])])
         self.lm = Mock()
-        self.lm.generate.return_value = distribution()
+        self.lm.generate.return_value = SourceMassResponse(masses=[
+            FocalSetMass(hypotheses=["x"], mass=0.7, justification="Support"),
+            FocalSetMass(hypotheses=["x", "y"], mass=0.3, justification="Ignorance"),
+        ])
         self.assigner = LanguageModelBpaAssigner(self.lm)
 
     def test_valid_assignment_and_context(self):
         result = self.assigner.assign_masses(self.fod, self.focal)
-        self.assertEqual(result, distribution())
+        self.assertAlmostEqual(result.sources[0].masses[0].mass, 0.7)
         self.assertIn("Probably x", self.lm.generate.call_args.args[0])
-        self.assertIs(self.lm.generate.call_args.kwargs["output_schema"], BpaOutput)
+        self.assertIs(self.lm.generate.call_args.kwargs["output_schema"], SourceMassResponse)
         self.assertEqual(BpaOutput.model_validate_json(result.model_dump_json()), result)
 
     def test_default_configuration(self):
@@ -58,17 +62,52 @@ class BpaTests(unittest.TestCase):
             with self.subTest(entries=entries), self.assertRaises(ValidationError):
                 SourceBpa(source="a", masses=[FocalSetMass(hypotheses=h, mass=m, justification="test") for h, m in entries])
 
-    def test_disallowed_output_subset(self):
-        for subset in [["y"], ["unknown"]]:
-            self.lm.generate.return_value = distribution(subset=subset)
+    def test_disallowed_subsets(self):
+        for subset in [["unknown"], ["y"]]:
+            self.lm.generate.return_value.masses[0].hypotheses = subset
             with self.subTest(subset=subset), self.assertRaises(ValueError):
                 self.assigner.assign_masses(self.fod, self.focal)
 
-    def test_output_source_mismatch(self):
-        result = distribution()
-        result.sources[0].source = "other"
-        self.lm.generate.return_value = result
-        with self.assertRaisesRegex(ValueError, "sources"):
+    def test_duplicate_generated_subsets(self):
+        self.lm.generate.return_value.masses[0].hypotheses = ["y", "x"]
+        with self.assertRaisesRegex(ValueError, "Duplicate mass subsets"):
+            self.assigner.assign_masses(self.fod, self.focal)
+
+    def test_preconstructed_response_is_revalidated(self):
+        self.lm.generate.return_value.masses[0].mass = float("nan")
+        with self.assertRaises(ValidationError):
+            self.assigner.assign_masses(self.fod, self.focal)
+
+    def test_invalid_generated_total(self):
+        self.lm.generate.return_value.masses[0].mass = 0.8
+        with self.assertRaisesRegex(ValueError, "sum to one"):
+            self.assigner.assign_masses(self.fod, self.focal)
+
+    def test_calls_are_per_source_and_evidence_is_isolated(self):
+        self.fod.hypotheses["b"] = "Definitely y"
+        self.focal.sources.append(SourceFocalSets(source="b", focal_sets=[
+            FocalSet(hypotheses=["y"], justification="Support b", citations=["Definitely y"])
+        ]))
+        second = SourceMassResponse(masses=[
+            FocalSetMass(hypotheses=["y"], mass=1, justification="Support b")
+        ])
+        self.lm.generate.side_effect = [self.lm.generate.return_value, second]
+        result = self.assigner.assign_masses(self.fod, self.focal)
+        self.assertEqual([entry.source for entry in result.sources], ["a", "b"])
+        self.assertEqual(result.sources[1].masses, second.masses)
+        self.assertEqual(self.lm.generate.call_count, 2)
+        first_call, second_call = self.lm.generate.call_args_list
+        first_context = json.loads(first_call.args[0].split("\n", 1)[1])
+        second_context = json.loads(second_call.args[0].split("\n", 1)[1])
+        self.assertEqual(first_context["source"], "a")
+        self.assertEqual(second_context["source"], "b")
+        self.assertNotIn("Definitely y", first_call.args[0])
+        self.assertNotIn("Probably x", second_call.args[0])
+        self.assertEqual(second_context["focal_sets"][0]["hypotheses"], ["y"])
+
+    def test_empty_response_is_rejected(self):
+        self.lm.generate.return_value.masses = []
+        with self.assertRaises(ValidationError):
             self.assigner.assign_masses(self.fod, self.focal)
 
     def test_focal_diagnostics_and_paraphrases_do_not_block_assignment(self):
@@ -76,7 +115,7 @@ class BpaTests(unittest.TestCase):
         self.focal.sources[0].focal_sets[0].citations = ["x is probable"]
         before = self.focal.model_dump()
 
-        self.assertEqual(self.assigner.assign_masses(self.fod, self.focal), distribution())
+        self.assertEqual(self.assigner.assign_masses(self.fod, self.focal).sources[0].source, "a")
 
         self.lm.generate.assert_called_once()
         prompt = self.lm.generate.call_args.args[0]
@@ -90,21 +129,34 @@ class BpaTests(unittest.TestCase):
         self.focal.sources[0].focal_sets.append(FocalSet(
             hypotheses=["unknown"], justification="Upstream issue", citations=["paraphrase"]
         ))
-        self.assertEqual(self.assigner.assign_masses(self.fod, self.focal), distribution())
+        self.assertEqual(self.assigner.assign_masses(self.fod, self.focal).sources[0].source, "a")
         self.lm.generate.assert_called_once()
 
-    def test_bpa_output_must_still_belong_to_frame(self):
-        self.focal.sources[0].focal_sets[0].hypotheses = ["unknown"]
-        self.lm.generate.return_value = distribution(subset=["unknown"])
-        with self.assertRaisesRegex(ValueError, "outside the frame"):
-            self.assigner.assign_masses(self.fod, self.focal)
-        self.lm.generate.assert_called_once()
+    def test_source_is_filled_from_input(self):
+        self.fod.hypotheses = {"Source with a long name": "Probably x"}
+        self.focal.sources[0].source = "Source with a long name"
+        result = self.assigner.assign_masses(self.fod, self.focal)
+        self.assertEqual(result.sources[0].source, "Source with a long name")
+        self.assertEqual(result.sources[0].masses[0].hypotheses, ["x"])
+        self.assertEqual(result.sources[0].masses[1].hypotheses, ["x", "y"])
 
     def test_vacuous_assignment(self):
-        self.lm.generate.return_value = BpaOutput(sources=[SourceBpa(source="a", masses=[
-            FocalSetMass(hypotheses=["y", "x"], mass=1, justification="Ignorance")
-        ])])
+        self.lm.generate.return_value = SourceMassResponse(masses=[
+            FocalSetMass(hypotheses=["x", "y"], mass=1, justification="Ignorance")
+        ])
         self.assertEqual(self.assigner.assign_masses(self.fod, self.focal).sources[0].masses[0].mass, 1)
+
+    def test_full_frame_is_allowed_in_any_order(self):
+        self.focal.sources[0].focal_sets = [FocalSet(
+            hypotheses=["y", "x"], justification="Uncertain", citations=["Probably"]
+        )]
+        self.lm.generate.return_value = SourceMassResponse(masses=[
+            FocalSetMass(hypotheses=["y", "x"], mass=1, justification="Ignorance")
+        ])
+        result = self.assigner.assign_masses(self.fod, self.focal)
+        context = json.loads(self.lm.generate.call_args.args[0].split("\n", 1)[1])
+        self.assertEqual(context["frame"], ["x", "y"])
+        self.assertEqual(result.sources[0].masses[0].hypotheses, ["y", "x"])
 
     def test_unexpected_provider_output(self):
         self.lm.generate.return_value = "bad"
@@ -113,11 +165,9 @@ class BpaTests(unittest.TestCase):
 
     def test_missing_focal_source_can_receive_full_ignorance(self):
         self.focal.sources = []
-        self.lm.generate.return_value = BpaOutput(sources=[SourceBpa(
-            source="a", masses=[FocalSetMass(
-                hypotheses=["x", "y"], mass=1, justification="Ignorance"
-            )]
-        )])
+        self.lm.generate.return_value = SourceMassResponse(masses=[
+            FocalSetMass(hypotheses=["y", "x"], mass=1, justification="Ignorance")
+        ])
         result = self.assigner.assign_masses(self.fod, self.focal)
         self.assertEqual(result.sources[0].masses[0].mass, 1)
 

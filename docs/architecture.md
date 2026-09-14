@@ -5,9 +5,9 @@
 ```
  1. Data generation   2. FoD extraction   3. Focal sets    4. Mass function   5. Evidence
     (implemented)        (implemented)       (implemented)     assignment         combination
-                                                               (NOT implemented)  (NOT implemented)
+                                                               (implemented)      (NOT implemented)
 
- data_utils/        -> fod/              -> focal_set/     -> mass_functions/ -> combiners/
+ data_utils/        -> fod/              -> focal_set/     -> bpa/            -> combiners/
 
  data/.../<run>/generated_dataset.json   experiments/runs/<run>/*_frame.json
 ```
@@ -53,11 +53,27 @@ The runner writes `<scenario_id>_frame.json` and
 `fod_extractor.output_dir` and `focal_set.output_dir` settings must therefore
 match.
 
-## 4. Mass function assignment (planned)
+## 4. Mass function assignment
 
-Package: `src/concerted_abduction/mass_functions/` — currently empty, no base class or registry yet.
+Package: `src/concerted_abduction/bpa/`. Base class: `BpaAssigner`.
+Registry: `BpaRegistry`. Default implementation: `LanguageModelBpaAssigner`.
 
-Will assign a mass function per model: given a model's response and the UoD, distribute belief mass across subsets of the UoD's hypotheses (confidence-based, per the CLAUDE.md TODO). Expected to follow the same base-class + registry pattern as the stages above (see [extending.md](extending.md)).
+The assigner loops over the source-response mapping in `FodOutput`, making one
+LLM call per source. Each request contains only that source's response and focal
+sets, plus the shared frame. Empty or out-of-frame upstream groups are excluded;
+citation diagnostics do not block assignment.
+
+The LLM returns `SourceMassResponse`, a `masses` list of `FocalSetMass` entries
+(`hypotheses`, `mass`, and `justification`). Python checks that each returned subset
+is a supplied focal set for that source or the full frame. It then supplies the
+source identifier when constructing `SourceBpa` and collects these objects into
+`BpaOutput`. Custom BPA prompts must follow this response contract.
+
+Masses must be finite numbers in [0, 1], with no duplicate subsets, and sum to one
+per source (tolerance `1e-6`). Omitted subsets have zero mass. A source without
+valid focal sets can receive only full ignorance. Invalid outputs raise errors;
+Python does not normalize masses or automatically retry failed calls. The default
+prompt is `prompts/bpa/v0.txt`.
 
 ## 5. Evidence combination (planned)
 

@@ -120,6 +120,12 @@ class FocalSetMass(BaseModel):
         return self
 
 
+class SourceMassResponse(BaseModel):
+    """LLM-generated masses for the source supplied in one request."""
+
+    masses: list[FocalSetMass] = Field(min_length=1)
+
+
 class SourceBpa(BaseModel):
     source: str = Field(min_length=1)
     masses: list[FocalSetMass] = Field(min_length=1)
