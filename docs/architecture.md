@@ -5,7 +5,7 @@
 ```
  1. Data generation   2. FoD extraction   3. Focal sets    4. Mass function   5. Evidence
     (implemented)        (implemented)       (implemented)     assignment         combination
-                                                               (implemented)      (NOT implemented)
+                                                               (implemented)      (implemented)
 
  data_utils/        -> fod/              -> focal_set/     -> bpa/            -> combiners/
 
@@ -75,11 +75,47 @@ valid focal sets can receive only full ignorance. Invalid outputs raise errors;
 Python does not normalize masses or automatically retry failed calls. The default
 prompt is `prompts/bpa/v0.txt`.
 
-## 5. Evidence combination (planned)
+## 5. Evidence combination
 
-Package: `src/concerted_abduction/combiners/` — currently empty, no base class or registry yet.
+Package: `src/concerted_abduction/combiners/`. Base class: `EvidenceCombiner`.
+Registry: `CombinerRegistry`. Default implementation: `DempsterCombiner`, registered
+as `"dempster"`.
 
-Will combine per-model mass functions into a single belief distribution using Dempster's rule of combination. Expected to follow the same base-class + registry pattern as the stages above.
+The deterministic interface is `combine(bpa_output, frame) -> CombinedEvidence`.
+`EvidenceCombiner` supplies shared input preparation and output construction.
+`DempsterCombiner._combine_pair` contains its intersection and normalization
+calculation; normalization policy and sequential processing remain in that class.
+The shared frame is explicit; it is never inferred from the observed focal sets.
+Implementations are selected through `[combiner]`, constructed with `from_config`,
+and invoked after BPA assignment by `scripts/run.py`. The runner writes
+`<scenario_id>_combined.json` alongside the upstream artifacts.
+
+Dempster's rule multiplies each pair of masses and collects products by focal-set
+intersection. Products with an empty intersection constitute conflict; remaining
+products are normalized by their total. It combines any positive number of sources
+sequentially, preserving mass on composite subsets. A single source passes through.
+
+Inputs are revalidated, including frame membership and duplicate subsets/sources.
+Source totals accepted within the existing `1e-6` BPA tolerance are corrected to
+one and recorded in diagnostics. The configurable `numerical_tolerance` (default
+`1e-12`) rejects a combination step when its surviving mass is at or below that
+threshold, raising `TotalConflictError`. The runner has already saved upstream
+artifacts when this happens; it stops without writing a combined artifact.
+
+`conflict_mass` is the overall conflict of the unnormalized conjunctive combination
+of all input sources: one minus the product of the sequential survival factors.
+Diagnostics separately record each step's conditional conflict, survival, source
+order, and input mass totals. Step conflicts depend on source order; the final
+distribution and overall conflict are order-independent in exact arithmetic.
+Floating-point results can vary slightly, and the numerical threshold may reject
+different steps under different orders near total conflict.
+
+The general output allows empty-set mass for future conflict-preserving rules and
+nullable conflict diagnostics for methods where the quantity is not applicable.
+Only Dempster's rule is currently implemented. Correlation between LLM sources is
+not corrected by this rule; interpreting combined masses as stronger evidence
+requires assessing the sources' dependence. The implementation produces combined
+masses, not calibrated diagnosis probabilities or a clinical decision.
 
 ## Shared building blocks
 

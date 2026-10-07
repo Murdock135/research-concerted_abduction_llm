@@ -48,9 +48,39 @@ Same steps, but subclass `FrameOfDiscernmentExtractor` and implement `generate_f
 
 Subclass `FocalSetCreator`, implement `create_focal_sets(self, fod_output)`, and decorate the implementation with `@FocalSetRegistry.register("your_name")`. The result must be a `FocalSetOutput`; implementations should preserve source attribution and ensure every cited excerpt comes from its corresponding source text.
 
-## Mass functions and combiners (not yet started)
+## Adding a BPA assigner
 
-`src/concerted_abduction/mass_functions/` and `src/concerted_abduction/combiners/` are empty packages. When implementing them, following the same base-class + registry + `ComponentConfig` pattern used above would keep the pipeline consistent — a `mass_functions` and `combiners` section would need to be added to `ConcertedAbductionSettings` in `src/config/settings.py`, plus corresponding entries in `default_config.toml`.
+Subclass `BpaAssigner` in `bpa/`, implement `assign_masses(fod_output,
+focal_set_output)`, register with `BpaRegistry`, and select it through `[bpa]`.
+
+## Adding an evidence combiner
+
+1. Subclass `EvidenceCombiner` in `combiners/`.
+2. Implement `from_config(cls, cfg: CombinerConfig)` and
+   `combine(self, bpa_output: BpaOutput, frame: FrameOfDiscernment) -> CombinedEvidence`.
+3. Decorate the implementation with `@CombinerRegistry.register("your_name")`.
+4. Import its module in `combiners/__init__.py` so registration occurs.
+5. Set `[combiner] type = "your_name"` in `config.toml`.
+
+There is no fixed limit on registered methods. Each implementation validates its
+inputs and returns normalized combined masses over the explicit frame, with source
+identifiers and a method name. `CombinedMass.hypotheses=[]` can represent retained
+conflict. `conflict_mass` is optional; document its meaning for each method and put
+additional JSON-compatible diagnostics in `diagnostics`. Extend configuration as
+needed for method-specific options. The runner uses only the abstract interface.
+
+The base class supplies `_prepare_inputs(bpa_output, frame)` for shared validation
+and conversion to set-keyed mass mappings. It returns `PreparedEvidence` containing
+the copied frame, source identifiers, distributions, and original mass totals.
+It preserves masses, including zero entries; normalization is an explicit decision
+for each method. `MassDistribution` is the shared type alias in `combiners/types.py`.
+
+Use `_build_result(frame=..., sources=..., masses=..., combiner=...,
+diagnostics=..., conflict_mass=...)` to order subsets consistently and validate the
+output contract. This helper preserves empty-set mass and does not normalize or
+clip values. The base class imposes no source-combination order. Dempster alone
+owns `_combine_pair`, source normalization, sequential processing, numerical
+thresholds, and cumulative conflict accounting.
 
 ---
 Next: [project_structure.md](project_structure.md) — a full annotated file tree, for reference while you work.

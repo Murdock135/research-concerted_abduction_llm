@@ -4,6 +4,12 @@ Mirrors the "Current TODO" section in CLAUDE.md, with more detail.
 
 ## Implemented
 
+- [x] Per-source BPA assignment (`LanguageModelBpaAssigner`) and runner integration
+- [x] Pluggable evidence combination (`EvidenceCombiner`, `CombinerRegistry`)
+- [x] Deterministic normalized Dempster combination with conflict diagnostics
+- [x] Runner integration and per-scenario combined artifacts
+- [x] Focused combiner tests and mocked runner coverage
+
 - [x] Synthetic dataset generation (`CommonInputDataGenerator`, Gemini + structured JSON schema output)
 - [x] Typed dataset schema (`ModelOutput`, `DataSample`, `DataSet`)
 - [x] LLM-based frame-of-discernment extraction (`LanguageModelFodExtractor`)
@@ -14,10 +20,8 @@ Mirrors the "Current TODO" section in CLAUDE.md, with more detail.
 
 ## Not yet implemented
 
-- [ ] **Mass function assignment** (`src/concerted_abduction/mass_functions/`) — currently empty. Needs to take a model's response + the UoD and produce a confidence-weighted mass distribution over subsets of hypotheses.
-- [ ] **Evidence combiners** (`src/concerted_abduction/combiners/`) — currently empty. Needs to implement Dempster's rule of combination over the per-model mass functions to produce a single reconciled belief distribution.
-- [ ] **End-to-end pipeline** — `scripts/run.py` runs FoD extraction and focal-set creation, but does not yet invoke mass assignment or combination.
-- [ ] **Comprehensive tests** — focused focal-set unit tests exist, but the complete pipeline is not covered.
+- [ ] **Additional combination methods** — register new `EvidenceCombiner` implementations as required by experiments.
+- [ ] **Comprehensive tests** — focused stage tests and mocked runner coverage exist; live LLM pipeline execution is not covered by automated tests.
 - [ ] **`integrations/`** (`gemini.py`, `langchain.py`, `openai.py`) — empty stubs, presumably for supporting additional/alternate LLM providers beyond the current direct `google-genai` SDK usage; not wired into any component yet.
 - [ ] **`src/concerted_abduction/core/`** — empty package, purpose not yet defined.
 - [ ] **CLI parameterization** — `scripts/generate_data.py`'s prompt (scenario count, domain, overlap matrix) is currently hardcoded in the script rather than configurable via CLI args or config.

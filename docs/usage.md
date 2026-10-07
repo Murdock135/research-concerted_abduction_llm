@@ -30,9 +30,10 @@ uv run python scripts/run.py --all
 - Loads `generated_dataset.json` from the latest run under `data_generator.output_dir`.
 - For each sample, resolves the configured `fod_extractor` implementation via `FodExtractorRegistry._get(cfg.type)` (default: `LanguageModelFodExtractor`, registered as `"language_model_fod_extractor"`) and runs it over that sample's model outputs to produce a frame of discernment.
 - Passes each `FodOutput` to the configured `focal_set` implementation (default: `LanguageModelFocalSetCreator`, registered as `"language_model_focal_set_creator"`).
-- Writes `<scenario_id>_frame.json` and `<scenario_id>_focal_sets.json` beneath the shared configured output directory. `fod_extractor.output_dir` and `focal_set.output_dir` must match.
+- Assigns source masses with the configured `[bpa]` implementation, then combines them using `[combiner]` (default: deterministic Dempster's rule).
+- Writes `<scenario_id>_frame.json`, `<scenario_id>_focal_sets.json`, `<scenario_id>_bpa.json`, and `<scenario_id>_combined.json` beneath one timestamped run directory. `fod_extractor`, `focal_set`, `bpa`, and `combiner` output directories must match.
 - Processes one sample by default to limit API usage. Use `--num-samples N` or `--all` to process more.
-- Stops there today — mass assignment and evidence combination are not implemented, so this does not yet produce a final combined belief distribution. See [roadmap.md](roadmap.md).
+- Total conflict or numerically negligible surviving mass raises `TotalConflictError`; upstream artifacts remain available for inspection.
 
 ## Tests
 

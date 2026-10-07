@@ -12,14 +12,14 @@ abductive-reasoning pipeline:
 Current state:
     This runner loads the most recently generated dataset and executes the
     configured frame-of-discernment extractor, focal-set creator, and BPA
-    assigner. Evidence combination remains to be implemented.
+    assigner, and evidence combiner.
 
 TODO:
     - [x] Refactor frame extraction into concerted_abduction.fod.
     - [x] Integrate focal-set creation.
     - [x] Add configuration-driven component and LLM-provider construction.
     - [x] Implement and integrate mass-function assignment.
-    - [ ] Implement and integrate evidence combination using Dempster's rule.
+    - [x] Implement and integrate pluggable evidence combination.
     - [ ] Add automated tests for the complete pipeline.
 
 The component implementation, language-model provider, model, prompt, input
@@ -43,15 +43,16 @@ from pathlib import Path
 from typing import Any
 
 from concerted_abduction.bpa import BpaAssigner, BpaRegistry
+from concerted_abduction.combiners import CombinerRegistry, EvidenceCombiner
 from concerted_abduction.focal_set import FocalSetCreator, FocalSetRegistry
 from concerted_abduction.fod import FodExtractorRegistry, FrameOfDiscernmentExtractor
-from concerted_abduction.types import BpaOutput, DataSet, FocalSetOutput, FodOutput
+from concerted_abduction.types import BpaOutput, CombinedEvidence, DataSet, FocalSetOutput, FodOutput
 from concerted_abduction.utils.run_utils import (
     latest_run_dir,
     make_run_dir,
     save_run_metadata,
 )
-from config.settings import ComponentConfig, ConcertedAbductionSettings, ENVSettings
+from config.settings import CombinerConfig, ComponentConfig, ConcertedAbductionSettings, ENVSettings
 
 
 def positive_int(value: str) -> int:
@@ -64,7 +65,7 @@ def positive_int(value: str) -> int:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run FoD extraction, focal-set creation, and BPA assignment."
+        description="Run FoD extraction, focal-set creation, BPA assignment, and evidence combination."
     )
     sample_group = parser.add_mutually_exclusive_group()
     sample_group.add_argument(
@@ -136,6 +137,19 @@ def create_bpa_assigner(cfg: ComponentConfig) -> BpaAssigner:
     return assigner
 
 
+def create_combiner(cfg: CombinerConfig) -> EvidenceCombiner:
+    combiner = CombinerRegistry._get(cfg.type).from_config(cfg)
+    if not isinstance(combiner, EvidenceCombiner):
+        raise TypeError("from_config() must return an EvidenceCombiner")
+    return combiner
+
+
+def save_combined(run_dir: Path, sample_id: str, result: CombinedEvidence) -> None:
+    (run_dir / f"{sample_id}_combined.json").write_text(
+        result.model_dump_json(indent=4), encoding="utf-8"
+    )
+
+
 def save_bpa(run_dir: Path, sample_id: str, result: BpaOutput) -> None:
     (run_dir / f"{sample_id}_bpa.json").write_text(
         result.model_dump_json(indent=4), encoding="utf-8"
@@ -169,10 +183,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     extractor_cfg = settings.fod_extractor
     focal_set_cfg = settings.focal_set
     bpa_cfg = settings.bpa
+    combiner_cfg = settings.combiner
 
-    if len({cfg.output_dir for cfg in (extractor_cfg, focal_set_cfg, bpa_cfg)}) != 1:
+    if len({cfg.output_dir for cfg in (extractor_cfg, focal_set_cfg, bpa_cfg, combiner_cfg)}) != 1:
         raise ValueError(
-            "fod_extractor, focal_set, and bpa output_dir must match so "
+            "fod_extractor, focal_set, bpa, and combiner output_dir must match so "
             "pipeline artifacts are written to the same run directory"
         )
 
@@ -194,6 +209,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     extractor = create_extractor(extractor_cfg)
     focal_set_creator = create_focal_set_creator(focal_set_cfg)
     bpa_assigner = create_bpa_assigner(bpa_cfg)
+    combiner = create_combiner(combiner_cfg)
     samples = dataset.samples if args.all else dataset.samples[: args.num_samples]
 
     run_dir = make_run_dir(extractor_cfg.output_dir)
@@ -213,6 +229,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "model": focal_set_cfg.llm.model_name if focal_set_cfg.llm else None,
         },
         bpa=bpa_cfg.model_dump(mode="json"),
+        combiner=combiner_cfg.model_dump(mode="json"),
         sample_count=len(samples),
         smoke_test=not args.all,
     )
@@ -230,6 +247,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         bpa_result = bpa_assigner.assign_masses(fod_result, focal_set_result)
         save_bpa(run_dir, sample.scenario_id, bpa_result)
+        combined_result = combiner.combine(bpa_result, fod_result.frame)
+        save_combined(run_dir, sample.scenario_id, combined_result)
         print(f"Processed {sample.scenario_id} -> {run_dir}")
 
     return 0

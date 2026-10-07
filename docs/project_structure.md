@@ -5,7 +5,7 @@
 ├── README.md                       Top-level summary (mirrors CLAUDE.md)
 ├── CLAUDE.md                       Instructions for Claude Code working in this repo
 ├── pyproject.toml                  Package metadata, deps (uv_build backend)
-├── config.toml                     (optional, not present by default) project-level config overrides
+├── config.toml                     Project overrides selecting the combiner
 │
 ├── src/
 │   ├── concerted_abduction/        Main package
@@ -22,8 +22,12 @@
 │   │   │   ├── base.py               FocalSetCreator ABC
 │   │   │   ├── registry.py           FocalSetRegistry
 │   │   │   └── llm.py                LanguageModelFocalSetCreator
-│   │   ├── mass_functions/          EMPTY — planned, see roadmap.md
-│   │   ├── combiners/               EMPTY — planned, see roadmap.md
+│   │   ├── mass_functions/          Legacy placeholder; assignment lives in bpa/
+│   │   ├── bpa/                     Per-source mass assignment (base, registry, LLM)
+│   │   ├── combiners/               Pluggable deterministic evidence combination
+│   │   │   ├── base.py               EvidenceCombiner ABC
+│   │   │   ├── registry.py           CombinerRegistry
+│   │   │   └── dempster.py           DempsterCombiner and TotalConflictError
 │   │   ├── core/                    EMPTY
 │   │   └── utils/
 │   │       └── utils.py              find_project_root(), load_prompt()
@@ -34,7 +38,7 @@
 ├── scripts/
 │   ├── generate_data.py            Entry point: generate synthetic dataset in a timestamped run
 │   ├── pipeline_prototype.py       Earlier pipeline prototype
-│   └── run.py                      Entry point: FoD extraction then focal-set creation
+│   └── run.py                      Entry point: FoD, focal sets, BPA, combination
 │
 ├── prompts/                        System prompts for LLM-driven components
 │   ├── data_generators/common_input/v0.txt
@@ -47,7 +51,7 @@
 │       └── generated/common_input/<run>/    Timestamped outputs of scripts/generate_data.py
 │
 ├── experiments/
-│   └── runs/                       Timestamped pipeline runs with one <scenario_id>_frame.json per sample
+│   └── runs/                       Timestamped runs with frame, focal-set, BPA, combined artifacts
 │
 ├── integrations/                   Root-level (NOT under src/) — gemini.py, langchain.py, openai.py
 │                                    all currently empty stub files, unused

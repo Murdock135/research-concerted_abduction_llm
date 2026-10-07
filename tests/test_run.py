@@ -14,6 +14,8 @@ from scripts import run
 
 
 class PipelineRunnerTests(unittest.TestCase):
+    @patch.object(run, "save_combined")
+    @patch.object(run, "create_combiner")
     @patch.object(run, "save_bpa")
     @patch.object(run, "create_bpa_assigner")
     @patch.object(run, "save_focal_sets")
@@ -40,6 +42,8 @@ class PipelineRunnerTests(unittest.TestCase):
         save_focal_sets: Mock,
         create_bpa_assigner: Mock,
         save_bpa: Mock,
+        create_combiner: Mock,
+        save_combined: Mock,
     ) -> None:
         env_settings.return_value.gemini_api_key = None
         component_cfg = SimpleNamespace(
@@ -54,6 +58,7 @@ class PipelineRunnerTests(unittest.TestCase):
             fod_extractor=component_cfg,
             focal_set=component_cfg,
             bpa=component_cfg,
+            combiner=component_cfg,
         )
         sample = DataSample(
             scenario_id="scenario-1",
@@ -85,6 +90,13 @@ class PipelineRunnerTests(unittest.TestCase):
         save_bpa.assert_called_once_with(
             Path("/tmp/pipeline-run"), "scenario-1",
             create_bpa_assigner.return_value.assign_masses.return_value,
+        )
+        create_combiner.return_value.combine.assert_called_once_with(
+            create_bpa_assigner.return_value.assign_masses.return_value, fod_result.frame
+        )
+        save_combined.assert_called_once_with(
+            Path("/tmp/pipeline-run"), "scenario-1",
+            create_combiner.return_value.combine.return_value,
         )
         save_frame.assert_called_once_with(
             Path("/tmp/pipeline-run"), "scenario-1", fod_result

@@ -51,6 +51,18 @@ generation, including invalid frame membership, source coverage, and citations.
 These checks do not discard the generated focal sets; the runner saves the
 output and emits a warning so failed experiments remain inspectable.
 
+## Combined evidence
+
+`CombinedEvidence` contains `frame`, `sources`, `combiner`, `masses`, optional
+`conflict_mass`, and JSON-compatible `diagnostics`. Each `CombinedMass` has
+`hypotheses` and `mass`; it does not require an LLM-generated justification.
+The empty subset is permitted so future rules can retain conflict. Combined
+subsets must be unique and belong to the frame, and masses sum to one within
+`1e-6`. Dempster outputs only non-empty subsets and reports discarded conflict
+separately. See [architecture.md](architecture.md) for its diagnostic semantics.
+
+Artifacts are written to `<combiner.output_dir>/<run>/<scenario_id>_combined.json`.
+
 ## Example JSON
 
 From `data/synthetic/examples/common_input/v0.json` (used as a few-shot example for data generation):

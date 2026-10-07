@@ -3,7 +3,7 @@
 Configuration is layered, resolved by `src/config/settings.py`:
 
 1. **Bundled defaults** — `src/config/default_config.toml` (always loaded)
-2. **Project overrides** — `config.toml` at the project root (optional; not present by default — copy/create one to override defaults, it's deep-merged on top)
+2. **Project overrides** — `config.toml` at the project root (optional, deep-merged over defaults)
 3. **Environment / secrets** — `.env` at the project root (API keys, loaded via dotenv-style `ENVSettings`)
 
 ## `ENVSettings`
@@ -18,7 +18,9 @@ Every script that calls the Gemini API constructs `ENVSettings()` first and rais
 
 ## `ConcertedAbductionSettings`
 
-The main settings object. Three top-level sections currently, one per implemented pipeline component:
+The main settings object has five sections: `data_generator`, `fod_extractor`,
+`focal_set`, `bpa`, and `combiner`. The LLM-backed stages use `ComponentConfig`;
+combination uses `CombinerConfig`, which extends it with `numerical_tolerance`.
 
 ```toml
 [data_generator]
@@ -50,7 +52,30 @@ provider = "google_genai"
 model = "gemini-2.5-flash"
 ```
 
-This is the content of `src/config/default_config.toml`. `fod_extractor` has no `examples_path` set by default.
+The bundled defaults additionally contain:
+
+```toml
+[bpa]
+type = "language_model_bpa_assigner"
+prompt_path = "prompts/bpa/v0.txt"
+output_dir = "experiments/runs"
+
+[bpa.llm]
+provider = "google_genai"
+model = "gemini-2.5-flash"
+
+[combiner]
+type = "dempster"
+output_dir = "experiments/runs"
+numerical_tolerance = 1e-12
+```
+
+Combination uses no LLM. For Dempster's rule, `numerical_tolerance` must be finite
+and strictly between zero and one. A step with surviving non-conflicting mass at
+or below it raises `TotalConflictError`. This is distinct from the source BPA
+sum-to-one tolerance (`1e-6`). All four analysis-stage output directories must
+match so artifacts are saved in one run directory. The root `config.toml` selects
+Dempster and otherwise inherits bundled defaults.
 
 ### `ComponentConfig` fields
 
