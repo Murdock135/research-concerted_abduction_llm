@@ -5,7 +5,7 @@
 ├── README.md                       Top-level summary (mirrors CLAUDE.md)
 ├── CLAUDE.md                       Instructions for Claude Code working in this repo
 ├── pyproject.toml                  Package metadata, deps (uv_build backend)
-├── config.toml                     Project overrides selecting the combiner
+├── config.toml                     (optional, not present by default) project-level config overrides
 │
 ├── src/
 │   ├── concerted_abduction/        Main package
@@ -22,12 +22,8 @@
 │   │   │   ├── base.py               FocalSetCreator ABC
 │   │   │   ├── registry.py           FocalSetRegistry
 │   │   │   └── llm.py                LanguageModelFocalSetCreator
-│   │   ├── mass_functions/          Legacy placeholder; assignment lives in bpa/
-│   │   ├── bpa/                     Per-source mass assignment (base, registry, LLM)
-│   │   ├── combiners/               Pluggable deterministic evidence combination
-│   │   │   ├── base.py               EvidenceCombiner ABC
-│   │   │   ├── registry.py           CombinerRegistry
-│   │   │   └── dempster.py           DempsterCombiner and TotalConflictError
+│   │   ├── bpa/                     Source mass assignment (base, registry, llm)
+│   │   ├── combiners/               Evidence combination (base, registry, dempster)
 │   │   ├── core/                    EMPTY
 │   │   └── utils/
 │   │       └── utils.py              find_project_root(), load_prompt()
@@ -38,12 +34,13 @@
 ├── scripts/
 │   ├── generate_data.py            Entry point: generate synthetic dataset in a timestamped run
 │   ├── pipeline_prototype.py       Earlier pipeline prototype
-│   └── run.py                      Entry point: FoD, focal sets, BPA, combination
+│   └── run.py                      Entry point: extraction through evidence combination
 │
 ├── prompts/                        System prompts for LLM-driven components
 │   ├── data_generators/common_input/v0.txt
 │   ├── fod/v0.txt
-│   └── focal_set/v0.txt
+│   ├── focal_set/v0.txt
+│   └── bpa/v0.txt
 │
 ├── data/
 │   └── synthetic/
@@ -51,7 +48,7 @@
 │       └── generated/common_input/<run>/    Timestamped outputs of scripts/generate_data.py
 │
 ├── experiments/
-│   └── runs/                       Timestamped runs with frame, focal-set, BPA, combined artifacts
+│   └── runs/                       Timestamped pipeline stage artifacts, errors, metadata, and summary
 │
 ├── integrations/                   Root-level (NOT under src/) — gemini.py, langchain.py, openai.py
 │                                    all currently empty stub files, unused

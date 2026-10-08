@@ -70,10 +70,6 @@ class ComponentConfig(BaseModel):
         return p
 
 
-class CombinerConfig(ComponentConfig):
-    numerical_tolerance: float = Field(default=1e-12, gt=0, lt=1, allow_inf_nan=False)
-
-
 class ConcertedAbductionSettings(BaseSettings):
     model_config = SettingsConfigDict(
         toml_file=[DEFAULT_CONFIG_PATH, PROJECT_CONFIG_PATH], extra="ignore"
@@ -83,7 +79,7 @@ class ConcertedAbductionSettings(BaseSettings):
     fod_extractor: ComponentConfig
     focal_set: ComponentConfig
     bpa: ComponentConfig
-    combiner: CombinerConfig
+    combiner: ComponentConfig
 
     @classmethod
     def settings_customise_sources(

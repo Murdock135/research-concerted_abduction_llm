@@ -49,9 +49,8 @@ Default implementation — `LanguageModelFocalSetCreator` (`llm.py`), registered
 - Is configured under `[focal_set]` and invoked after FoD extraction by `scripts/run.py`.
 
 The runner writes `<scenario_id>_frame.json` and
-`<scenario_id>_focal_sets.json` into the same timestamped run directory. The
-`fod_extractor.output_dir` and `focal_set.output_dir` settings must therefore
-match.
+`<scenario_id>_focal_sets.json` into the same timestamped run directory. The `fod_extractor`, `focal_set`, `bpa`, and `combiner` output directories
+must therefore match.
 
 ## 4. Mass function assignment
 
@@ -77,52 +76,32 @@ prompt is `prompts/bpa/v0.txt`.
 
 ## 5. Evidence combination
 
-Package: `src/concerted_abduction/combiners/`. Base class: `EvidenceCombiner`.
-Registry: `CombinerRegistry`. Default implementation: `DempsterCombiner`, registered
-as `"dempster"`.
+Package: `src/concerted_abduction/combiners/`. Base class: `Combiner`.
+Registry: `CombinerRegistry`. Default: `DempsterCombination` (`"Dempster"`).
 
-The deterministic interface is `combine(bpa_output, frame) -> CombinedEvidence`.
-`EvidenceCombiner` supplies shared input preparation and output construction.
-`DempsterCombiner._combine_pair` contains its intersection and normalization
-calculation; normalization policy and sequential processing remain in that class.
-The shared frame is explicit; it is never inferred from the observed focal sets.
-Implementations are selected through `[combiner]`, constructed with `from_config`,
-and invoked after BPA assignment by `scripts/run.py`. The runner writes
-`<scenario_id>_combined.json` alongside the upstream artifacts.
+The contract is `combine(BpaOutput) -> tuple[CombinedMasses, float]`: normalized
+combined masses followed by conflict mass. Dempster converts each source to a
+set-keyed mass mapping, corrects source totals within BPA rounding tolerance,
+reduces unnormalized intersections, and normalizes once at the end. Composite
+focal sets are preserved. With three sources, discarded conflict increments are
+added from the unnormalized reduction. Exact total conflict raises `ValueError`.
 
-Dempster's rule multiplies each pair of masses and collects products by focal-set
-intersection. Products with an empty intersection constitute conflict; remaining
-products are normalized by their total. It combines any positive number of sources
-sequentially, preserving mass on composite subsets. A single source passes through.
+The runner constructs the registered combiner without arguments, invokes it after
+BPA assignment, and writes `<scenario_id>_combined.json` with `combined_masses`
+and `conflict`. The selected method is stored in run metadata. It makes no LLM calls.
 
-Inputs are revalidated, including frame membership and duplicate subsets/sources.
-Source totals accepted within the existing `1e-6` BPA tolerance are corrected to
-one and recorded in diagnostics. The configurable `numerical_tolerance` (default
-`1e-12`) rejects a combination step when its surviving mass is at or below that
-threshold, raising `TotalConflictError`. The runner has already saved upstream
-artifacts when this happens; it stops without writing a combined artifact.
-
-`conflict_mass` is the overall conflict of the unnormalized conjunctive combination
-of all input sources: one minus the product of the sequential survival factors.
-Diagnostics separately record each step's conditional conflict, survival, source
-order, and input mass totals. Step conflicts depend on source order; the final
-distribution and overall conflict are order-independent in exact arithmetic.
-Floating-point results can vary slightly, and the numerical threshold may reject
-different steps under different orders near total conflict.
-
-The general output allows empty-set mass for future conflict-preserving rules and
-nullable conflict diagnostics for methods where the quantity is not applicable.
-Only Dempster's rule is currently implemented. Correlation between LLM sources is
-not corrected by this rule; interpreting combined masses as stronger evidence
-requires assessing the sources' dependence. The implementation produces combined
-masses, not calibrated diagnosis probabilities or a clinical decision.
+Each stage's artifact is saved immediately. Ordinary scenario failures produce
+`<scenario_id>_error.json`; subsequent scenarios continue. `summary.json` records
+outcomes and counts. Setup failures stop the run, and any scenario failure yields
+exit status 1 after the batch finishes. These masses remain research outputs;
+no diagnosis ranking or generated final answer is added.
 
 ## Shared building blocks
 
 - **`src/concerted_abduction/types.py`** — the Pydantic dataset schema shared by generation and extraction. See [data_model.md](data_model.md).
 - **`src/concerted_abduction/utils/utils.py`** — `find_project_root()` (walks up from a file to the directory containing `.git`) and `load_prompt()` (reads a prompt file as text). Used throughout to resolve paths relative to the repo root regardless of where a script is invoked from.
 - **`src/config/settings.py`** — TOML + env-driven configuration, see [configuration.md](configuration.md).
-- **Registries** (`DataGeneratorRegistry`, `FodExtractorRegistry`, `FocalSetRegistry`) — name → class lookup so `config.toml` can select an implementation by string. See [extending.md](extending.md).
+- **Registries** (`DataGeneratorRegistry`, `FodExtractorRegistry`, `FocalSetRegistry`, `BpaRegistry`, `CombinerRegistry`) — name → class lookup so `config.toml` can select an implementation by string. See [extending.md](extending.md).
 
 ## Not currently used
 

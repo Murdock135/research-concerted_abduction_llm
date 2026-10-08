@@ -14,14 +14,10 @@ Early-stage research code. Working today:
 - Typed dataset schema
 - LLM-based frame-of-discernment (FoD) extraction
 - LLM-based focal-set creation with source-text citations
-- LLM-based per-source BPA assignment
-- Pluggable evidence combination with a deterministic `DempsterCombiner`
-- Runner integration through combined-evidence JSON output
 
-Not yet implemented:
-
-- Alternative evidence-combination rules
-- Automated coverage of live LLM pipeline execution
+- LLM-based source BPA assignment with distribution validation
+- Registry-selected Dempster evidence combination
+- Complete runner with per-scenario error logs and batch summaries
 
 ## Setup
 
@@ -38,8 +34,8 @@ GEMINI_API_KEY=...
 ## Usage
 
 ```bash
-python scripts/generate_data.py       # Generate synthetic dataset via Gemini API -> data/generated_dataset.json
-uv run python scripts/run.py          # Run FoD, focal sets, BPA assignment, and combination
+uv run python scripts/generate_data.py  # Generate a timestamped synthetic dataset
+uv run python scripts/run.py            # Process one scenario through combination
 ```
 
 Run the unit tests with:
@@ -54,8 +50,8 @@ uv run python -m unittest discover -s tests -p 'test_*.py'
 2. **Dataset types** (`src/concerted_abduction/types.py`) — Pydantic models: `DataSample` (one scenario), `ModelOutput` (one model's response), `DataSet` (collection), `OverlapMatrix` (n×n similarity matrix).
 3. **Frame-of-discernment extraction** (`src/concerted_abduction/fod/`) — `FrameOfDiscernmentExtractor` abstract base; `LanguageModelFodExtractor` uses Gemini to read all model outputs and produce a frame of discernment (FoD). `FodExtractorRegistry` lets components be registered and retrieved by name.
 4. **Focal-set creation** (`src/concerted_abduction/focal_set/`) — `LanguageModelFocalSetCreator` derives subsets of the FoD for each source, explains each subset, and cites verbatim supporting excerpts.
-5. **Mass assignment** (`src/concerted_abduction/bpa/`) — assigns a validated mass distribution per source.
-6. **Evidence combination** (`src/concerted_abduction/combiners/`) — `EvidenceCombiner` and `CombinerRegistry` support additional methods; `DempsterCombiner` merges source BPAs and reports conflict. Configured through `[combiner]`, with results saved as `<scenario_id>_combined.json`.
+5. **Mass assignment** (`src/concerted_abduction/bpa/`) — assigns and validates source masses.
+6. **Evidence combination** (`src/concerted_abduction/combiners/`) — combines source BPAs and returns normalized masses plus conflict.
 
 ## Project layout
 
@@ -63,7 +59,7 @@ uv run python -m unittest discover -s tests -p 'test_*.py'
 src/concerted_abduction/  Core library (types, fod, focal_set, data_utils, bpa, combiners)
 prompts/                  Prompt templates, loaded via load_prompt()
 data/                     Example data and generated datasets
-scripts/                  Runnable entry points (generate_data.py, pipeline_prototype.py)
+scripts/                  Runnable entry points (generate_data.py, run.py)
 integrations/             LLM provider integrations (gemini, langchain, openai)
 config/                   Project configuration (settings.py)
 docs/                     Reference notes
@@ -82,6 +78,6 @@ notebooks/                Scratch notebooks
 
 ## Roadmap
 
-- Add alternative combination methods as needed for experiments
-- Evaluate source dependence and conflict behavior
-- Extend end-to-end test coverage; see [docs/roadmap.md](docs/roadmap.md)
+The prototype pipeline is implemented through combined masses. Research evaluation,
+BPA calibration, and treatment of source dependence remain open. See
+[docs/roadmap.md](docs/roadmap.md).

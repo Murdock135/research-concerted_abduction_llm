@@ -36,6 +36,5 @@ provider = "google_genai"
 model = "gemini-2.5-flash"
 
 [combiner]
-type = "dempster"
+type = "Dempster"
 output_dir = "experiments/runs"
-numerical_tolerance = 1e-12

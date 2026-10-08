@@ -1,7 +1,7 @@
 from math import fsum, isclose
 from typing import Self
 
-from pydantic import BaseModel, Field, JsonValue, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 import pandas as pd
 import numpy as np
@@ -9,6 +9,8 @@ import numpy.typing as npt
 
 # Type alias for overlap matrix representing the similarity/overlap between model outputs
 OverlapMatrix = npt.NDArray[np.int32]
+
+type MassFunction = dict[frozenset[str], float]
 
 class ModelOutput(BaseModel):
     source: str = Field(..., description="Name of the source that generated this hypothesis(es)")
@@ -153,37 +155,17 @@ class BpaOutput(BaseModel):
 
 
 class CombinedMass(BaseModel):
-    """A combined subset mass; [] represents conflict for rules retaining it."""
-
-    hypotheses: list[str]
-    mass: float = Field(ge=0, le=1, allow_inf_nan=False)
-
-
-class CombinedEvidence(BaseModel):
-    """Method-neutral distribution, including optional rule-specific diagnostics."""
-
-    frame: FrameOfDiscernment
-    sources: list[str] = Field(min_length=1)
-    combiner: str = Field(min_length=1)
-    masses: list[CombinedMass] = Field(min_length=1)
-    conflict_mass: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
-    diagnostics: dict[str, JsonValue] = Field(default_factory=dict)
+    focal_set: set[str] = Field(..., description="focal set: ['tuberculosis', 'bronchitis']")
+    combined_mass: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    k: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
 
     @model_validator(mode="after")
-    def valid_distribution(self) -> Self:
-        frame = self.frame.frame
-        if not frame or any(not h.strip() for h in frame) or len(set(frame)) != len(frame):
-            raise ValueError("Frame must contain unique, non-blank hypotheses")
-        if any(not s.strip() for s in self.sources) or len(set(self.sources)) != len(self.sources):
-            raise ValueError("Sources must be unique and non-blank")
-        subsets = []
-        for entry in self.masses:
-            subset = frozenset(entry.hypotheses)
-            if len(subset) != len(entry.hypotheses) or not subset.issubset(frame):
-                raise ValueError("Invalid combined mass subset")
-            subsets.append(subset)
-        if len(set(subsets)) != len(subsets):
-            raise ValueError("Duplicate combined mass subsets")
-        if not isclose(fsum(entry.mass for entry in self.masses), 1.0, rel_tol=0, abs_tol=1e-6):
-            raise ValueError("Combined masses must sum to one")
+    def require_one_mass(self) -> Self:
+        if (self.combined_mass is None) == (self.k is None):
+            raise ValueError("Provide exactly one of 'combined_mass' or 'k'")
+
         return self
+
+
+class CombinedMasses(BaseModel):
+    combined_masses: list[CombinedMass]

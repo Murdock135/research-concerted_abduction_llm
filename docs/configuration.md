@@ -3,7 +3,7 @@
 Configuration is layered, resolved by `src/config/settings.py`:
 
 1. **Bundled defaults** — `src/config/default_config.toml` (always loaded)
-2. **Project overrides** — `config.toml` at the project root (optional, deep-merged over defaults)
+2. **Project overrides** — `config.toml` at the project root (optional; not present by default — copy/create one to override defaults, it's deep-merged on top)
 3. **Environment / secrets** — `.env` at the project root (API keys, loaded via dotenv-style `ENVSettings`)
 
 ## `ENVSettings`
@@ -18,16 +18,14 @@ Every script that calls the Gemini API constructs `ENVSettings()` first and rais
 
 ## `ConcertedAbductionSettings`
 
-The main settings object has five sections: `data_generator`, `fod_extractor`,
-`focal_set`, `bpa`, and `combiner`. The LLM-backed stages use `ComponentConfig`;
-combination uses `CombinerConfig`, which extends it with `numerical_tolerance`.
+The main settings object has five top-level component sections:
 
 ```toml
 [data_generator]
 type = "common_input"
 prompt_path = "prompts/data_generators/common_input/v0.txt"
 examples_path = "data/synthetic/examples/common_input/v0.json"
-output_dir = "data"
+output_dir = "data/synthetic/generated/common_input/"
 
 [data_generator.llm]
 provider = "google_genai"
@@ -50,11 +48,7 @@ output_dir = "experiments/runs"
 [focal_set.llm]
 provider = "google_genai"
 model = "gemini-2.5-flash"
-```
 
-The bundled defaults additionally contain:
-
-```toml
 [bpa]
 type = "language_model_bpa_assigner"
 prompt_path = "prompts/bpa/v0.txt"
@@ -65,17 +59,13 @@ provider = "google_genai"
 model = "gemini-2.5-flash"
 
 [combiner]
-type = "dempster"
+type = "Dempster"
 output_dir = "experiments/runs"
-numerical_tolerance = 1e-12
 ```
 
-Combination uses no LLM. For Dempster's rule, `numerical_tolerance` must be finite
-and strictly between zero and one. A step with surviving non-conflicting mass at
-or below it raises `TotalConflictError`. This is distinct from the source BPA
-sum-to-one tolerance (`1e-6`). All four analysis-stage output directories must
-match so artifacts are saved in one run directory. The root `config.toml` selects
-Dempster and otherwise inherits bundled defaults.
+These are the bundled defaults. The combiner requires no LLM, prompt, or examples.
+The extractor, focal-set creator, BPA assigner, and combiner output directories
+must match. Override `[combiner].type` to select another registered implementation.
 
 ### `ComponentConfig` fields
 
@@ -110,6 +100,8 @@ settings = ConcertedAbductionSettings()
 gen_cfg = settings.data_generator
 extractor_cfg = settings.fod_extractor
 focal_set_cfg = settings.focal_set
+bpa_cfg = settings.bpa
+combiner_cfg = settings.combiner
 ```
 
 ---

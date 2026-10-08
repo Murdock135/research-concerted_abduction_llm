@@ -1,5 +1,7 @@
-from .base import EvidenceCombiner
-from .registry import CombinerRegistry
-from .dempster import DempsterCombiner, TotalConflictError
+"""Evidence combiners and built-in registrations."""
 
-__all__ = ["EvidenceCombiner", "CombinerRegistry", "DempsterCombiner", "TotalConflictError"]
+from .base import Combiner
+from .dempster import DempsterCombination
+from .registry import CombinerRegistry
+
+__all__ = ["Combiner", "CombinerRegistry", "DempsterCombination"]
