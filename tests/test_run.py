@@ -21,6 +21,7 @@ from config.settings import ComponentConfig, ConcertedAbductionSettings
 
 
 class PipelineRunnerTests(unittest.TestCase):
+    @patch.object(Path, "mkdir")
     @patch.object(Path, "write_text")
     @patch.object(run, "save_bpa")
     @patch.object(run, "create_bpa_assigner")
@@ -49,6 +50,7 @@ class PipelineRunnerTests(unittest.TestCase):
         create_bpa_assigner: Mock,
         save_bpa: Mock,
         write_text: Mock,
+        mkdir: Mock,
     ) -> None:
         env_settings.return_value.gemini_api_key = None
         component_cfg = SimpleNamespace(
@@ -98,14 +100,14 @@ class PipelineRunnerTests(unittest.TestCase):
             fod_result, focal_set_result
         )
         save_bpa.assert_called_once_with(
-            Path("/tmp/pipeline-run"), "scenario-1",
+            Path("/tmp/pipeline-run/scenario-1"),
             create_bpa_assigner.return_value.assign_masses.return_value,
         )
         save_frame.assert_called_once_with(
-            Path("/tmp/pipeline-run"), "scenario-1", fod_result
+            Path("/tmp/pipeline-run/scenario-1"), fod_result
         )
         save_focal_sets.assert_called_once_with(
-            Path("/tmp/pipeline-run"), "scenario-1", focal_set_result
+            Path("/tmp/pipeline-run/scenario-1"), focal_set_result
         )
 
     def test_failures_are_logged_and_later_scenarios_run(self):
@@ -160,8 +162,16 @@ class PipelineRunnerTests(unittest.TestCase):
                     patch.object(run, "create_bpa_assigner", return_value=assigner),
                 ):
                     self.assertEqual(run.main(["--all"]), 1 if stage else 0)
-                self.assertTrue((root / "scenario-1_bpa.json").exists())
-                combined = json.loads((root / "scenario-1_combined.json").read_text())
+                self.assertEqual(
+                    {path.name for path in root.iterdir()},
+                    {"scenario-0", "scenario-1", "metadata.json", "summary.json"},
+                )
+                self.assertEqual(
+                    {path.name for path in (root / "scenario-1").iterdir()},
+                    {"frame.json", "focal_sets.json", "bpa.json", "combined.json"},
+                )
+                self.assertTrue((root / "scenario-1" / "bpa.json").exists())
+                combined = json.loads((root / "scenario-1" / "combined.json").read_text())
                 masses = CombinedMasses.model_validate(combined)
                 self.assertEqual(masses.combined_masses[0].focal_set, {"x"})
                 self.assertEqual(masses.combined_masses[0].combined_mass, 1.0)
@@ -171,7 +181,7 @@ class PipelineRunnerTests(unittest.TestCase):
                 summary = json.loads((root / "summary.json").read_text())
                 self.assertEqual(summary["completed"], 1 if stage else 2)
                 self.assertEqual(summary["failed"], 1 if stage else 0)
-                error_path = root / "scenario-0_error.json"
+                error_path = root / "scenario-0" / "error.json"
                 if stage is not None:
                     error = json.loads(error_path.read_text())
                     self.assertEqual(error, {
@@ -181,15 +191,15 @@ class PipelineRunnerTests(unittest.TestCase):
                                     if stage == "combination" else "Test failure"),
                     })
                     self.assertEqual(summary["scenarios"][0], error)
-                    self.assertEqual((root / "scenario-0_bpa.json").exists(), stage == "combination")
-                    self.assertFalse((root / "scenario-0_combined.json").exists())
+                    self.assertEqual((root / "scenario-0" / "bpa.json").exists(), stage == "combination")
+                    self.assertFalse((root / "scenario-0" / "combined.json").exists())
                     if stage in ("focal_sets", "bpa", "combination"):
-                        self.assertTrue((root / "scenario-0_frame.json").exists())
+                        self.assertTrue((root / "scenario-0" / "frame.json").exists())
                     if stage in ("bpa", "combination"):
-                        self.assertTrue((root / "scenario-0_focal_sets.json").exists())
+                        self.assertTrue((root / "scenario-0" / "focal_sets.json").exists())
                 else:
                     self.assertFalse(error_path.exists())
-                    self.assertTrue((root / "scenario-0_bpa.json").exists())
+                    self.assertTrue((root / "scenario-0" / "bpa.json").exists())
 
     def test_configured_combiner_and_unknown_method(self):
         settings = ConcertedAbductionSettings()  # pyright: ignore[reportCallIssue]

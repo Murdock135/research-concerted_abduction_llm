@@ -42,6 +42,7 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from concerted_abduction.combiners import Combiner, CombinerRegistry
 from concerted_abduction.bpa import BpaAssigner, BpaRegistry
@@ -144,23 +145,23 @@ def create_combiner(cfg: ComponentConfig) -> Combiner:
 
 
 def save_combined(
-    run_dir: Path, sample_id: str, masses: CombinedMasses, conflict: float
+    scenario_dir: Path, masses: CombinedMasses, conflict: float
 ) -> None:
-    (run_dir / f"{sample_id}_combined.json").write_text(
+    (scenario_dir / "combined.json").write_text(
         json.dumps(masses.model_dump(mode="json") | {"conflict": conflict},
                    ensure_ascii=False, indent=4),
         encoding="utf-8",
     )
 
 
-def save_bpa(run_dir: Path, sample_id: str, result: BpaOutput) -> None:
-    (run_dir / f"{sample_id}_bpa.json").write_text(
+def save_bpa(scenario_dir: Path, result: BpaOutput) -> None:
+    (scenario_dir / "bpa.json").write_text(
         result.model_dump_json(indent=4), encoding="utf-8"
     )
 
 
-def save_frame(run_dir: Path, sample_id: str, result: FodOutput) -> None:
-    output_path = run_dir / f"{sample_id}_frame.json"
+def save_frame(scenario_dir: Path, result: FodOutput) -> None:
+    output_path = scenario_dir / "frame.json"
     output_path.write_text(
         json.dumps(result.model_dump(), ensure_ascii=False, indent=4),
         encoding="utf-8",
@@ -168,9 +169,9 @@ def save_frame(run_dir: Path, sample_id: str, result: FodOutput) -> None:
 
 
 def save_focal_sets(
-    run_dir: Path, sample_id: str, result: FocalSetOutput
+    scenario_dir: Path, result: FocalSetOutput
 ) -> None:
-    output_path = run_dir / f"{sample_id}_focal_sets.json"
+    output_path = scenario_dir / "focal_sets.json"
     output_path.write_text(
         json.dumps(result.model_dump(), ensure_ascii=False, indent=4),
         encoding="utf-8",
@@ -214,6 +215,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     bpa_assigner = create_bpa_assigner(bpa_cfg)
     combiner = create_combiner(combiner_cfg)
     samples = dataset.samples if args.all else dataset.samples[: args.num_samples]
+    sample_ids = [sample.scenario_id for sample in samples]
+    if any(not sample_id for sample_id in sample_ids) or len(set(sample_ids)) != len(sample_ids):
+        raise ValueError("Selected scenario IDs must be non-empty and unique")
 
     run_dir = make_run_dir(extractor_cfg.output_dir)
     save_run_metadata(
@@ -239,13 +243,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     outcomes: list[dict[str, str]] = []
     for sample in samples:
+        # Encode IDs as single path components; dots cannot resolve to parent directories.
+        scenario_dir = run_dir / quote(sample.scenario_id, safe="").replace(".", "%2E")
+        scenario_dir.mkdir()
         stage = "frame"
         try:
             fod_result = extractor.generate_frame(sample)
-            save_frame(run_dir, sample.scenario_id, fod_result)
+            save_frame(scenario_dir, fod_result)
             stage = "focal_sets"
             focal_set_result = focal_set_creator.create_focal_sets(fod_result)
-            save_focal_sets(run_dir, sample.scenario_id, focal_set_result)
+            save_focal_sets(scenario_dir, focal_set_result)
             if focal_set_result.validation_errors:
                 print(
                     f"Warning: {sample.scenario_id} focal sets failed "
@@ -254,10 +261,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             stage = "bpa"
             bpa_result = bpa_assigner.assign_masses(fod_result, focal_set_result)
-            save_bpa(run_dir, sample.scenario_id, bpa_result)
+            save_bpa(scenario_dir, bpa_result)
             stage = "combination"
             masses, conflict = combiner.combine(bpa_result)
-            save_combined(run_dir, sample.scenario_id, masses, conflict)
+            save_combined(scenario_dir, masses, conflict)
         except Exception as exc:
             # Isolate scenario failures; KeyboardInterrupt still stops execution.
             outcome = {
@@ -267,13 +274,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "error_type": type(exc).__name__,
                 "message": str(exc),
             }
-            (run_dir / f"{sample.scenario_id}_error.json").write_text(
+            (scenario_dir / "error.json").write_text(
                 json.dumps(outcome, ensure_ascii=False, indent=4), encoding="utf-8"
             )
             print(f"Failed {sample.scenario_id} at {stage}: {exc}; continuing batch")
         else:
             outcome = {"scenario_id": sample.scenario_id, "status": "completed"}
-            print(f"Processed {sample.scenario_id} -> {run_dir}")
+            print(f"Processed {sample.scenario_id} -> {scenario_dir}")
         outcomes.append(outcome)
 
     failed = sum(outcome["status"] == "failed" for outcome in outcomes)

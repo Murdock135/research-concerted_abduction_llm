@@ -1,11 +1,36 @@
 '''
-Generate synthetic data for the concerted abduction project using a language model. This script initializes the data generator, creates a prompt for generating data, and saves the generated dataset to a JSON file.
+Generate synthetic data for the concerted abduction project using a language model. This script initializes the data generator, uses the generation prompt below, and saves the generated dataset to a JSON file.
 '''
 import json
 
 from concerted_abduction.data_utils import DataGeneratorRegistry
 from concerted_abduction.utils.run_utils import make_run_dir, save_run_metadata
 from config.settings import ENVSettings, ConcertedAbductionSettings
+
+GENERATION_PROMPT = """Generate 5 synthetic medical diagnosis data samples.
+
+For 4 samples, use 3 models with the following overlap matrix:
+[[1.0, 0.5, 0.2], [0.5, 1.0, 0.3], [0.2, 0.3, 1.0]].
+
+Include Zadeh's classic counterexample as the remaining sample, with id
+"zadeh_classic". This sample must have exactly 2 sources, Doctor A and Doctor B,
+rather than 3 models; the overlap matrix above does not apply to this sample.
+Use the mutually exclusive, exhaustive frame {meningitis, concussion, brain tumor}.
+Doctor A assigns basic belief masses m({meningitis}) = 0.99 and
+m({brain tumor}) = 0.01. Doctor B assigns m({concussion}) = 0.99 and
+m({brain tumor}) = 0.01. All other masses are zero, including mass on the full
+frame. State these exact masses explicitly in each doctor's response as supplied
+synthetic belief assignments, so they can be recovered without inferring them
+from qualitative confidence. Do not add diagnoses, uncertainty mass, or a third
+source to this sample.
+
+This sample is intended to illustrate the counterintuitive effect of normalized
+Dempster combination under nearly total conflict: K = 0.9999, the unnormalized
+mass on {brain tumor} is 0.0001, and normalization yields m({brain tumor}) = 1,
+even though both sources initially assign it only 0.01. Use this as the design
+target; keep the two source responses separate and do not replace their beliefs
+with the combined result. Return the usual dataset schema.
+"""
 
 def main():
     env = ENVSettings()
@@ -23,9 +48,7 @@ def main():
         examples_path=cfg.examples_path,
     )
 
-    # Example prompt for generating data
-    prompt = "Generate 5 data samples in a medical diagnosis scenario for 3 models with the following overlap matrix: [[1.0, 0.5, 0.2], [0.5, 1.0, 0.3], [0.2, 0.3, 1.0]]"
-    dataset = generator.generate_data(prompt=prompt)
+    dataset = generator.generate_data(prompt=GENERATION_PROMPT)
     print("Generated Dataset:\n", dataset)
 
     # Dump the generated dataset to a JSON file
@@ -40,7 +63,7 @@ def main():
         generator_type=cfg.type,
         examples_path=str(cfg.examples_path),
         model=cfg.llm.model_name,
-        prompt=prompt,
+        prompt=GENERATION_PROMPT,
     )
 
 if __name__ == "__main__":

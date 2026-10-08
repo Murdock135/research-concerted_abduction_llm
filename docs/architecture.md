@@ -9,7 +9,7 @@
 
  data_utils/        -> fod/              -> focal_set/     -> bpa/            -> combiners/
 
- data/.../<run>/generated_dataset.json   experiments/runs/<run>/*_frame.json
+ data/.../<run>/generated_dataset.json   experiments/runs/<run>/<scenario_id>/frame.json
 ```
 
 Each stage is defined as an abstract **component** (a base class + a package) with one or more concrete, **pluggable implementations**, looked up by name through a **registry** at runtime (see [extending.md](extending.md)). Which implementation, LLM, prompt file, and example file each component uses for a given run is controlled by `config.toml` (see [configuration.md](configuration.md)) — the descriptions below name the implementation currently registered as the default for each stage, not a fixed part of the stage itself.
@@ -48,8 +48,8 @@ Default implementation — `LanguageModelFocalSetCreator` (`llm.py`), registered
 - Checks that all input sources appear exactly once, every hypothesis belongs to the frame, and every citation occurs verbatim in the corresponding source text. Failures are recorded in `validation_errors` so experimental output is preserved for inspection.
 - Is configured under `[focal_set]` and invoked after FoD extraction by `scripts/run.py`.
 
-The runner writes `<scenario_id>_frame.json` and
-`<scenario_id>_focal_sets.json` into the same timestamped run directory. The `fod_extractor`, `focal_set`, `bpa`, and `combiner` output directories
+The runner writes `<scenario_id>/frame.json` and
+`<scenario_id>/focal_sets.json` into a scenario-specific folder within the timestamped run directory. The `fod_extractor`, `focal_set`, `bpa`, and `combiner` output directories
 must therefore match.
 
 ## 4. Mass function assignment
@@ -87,11 +87,11 @@ focal sets are preserved. With three sources, discarded conflict increments are
 added from the unnormalized reduction. Exact total conflict raises `ValueError`.
 
 The runner constructs the registered combiner without arguments, invokes it after
-BPA assignment, and writes `<scenario_id>_combined.json` with `combined_masses`
+BPA assignment, and writes `<scenario_id>/combined.json` with `combined_masses`
 and `conflict`. The selected method is stored in run metadata. It makes no LLM calls.
 
 Each stage's artifact is saved immediately. Ordinary scenario failures produce
-`<scenario_id>_error.json`; subsequent scenarios continue. `summary.json` records
+`<scenario_id>/error.json`; subsequent scenarios continue. `summary.json` records
 outcomes and counts. Setup failures stop the run, and any scenario failure yields
 exit status 1 after the batch finishes. These masses remain research outputs;
 no diagnosis ranking or generated final answer is added.

@@ -30,11 +30,12 @@ uv run python scripts/run.py --all
 - Loads `generated_dataset.json` from the latest run under `data_generator.output_dir`.
 - For each sample, resolves the configured `fod_extractor` implementation via `FodExtractorRegistry._get(cfg.type)` (default: `LanguageModelFodExtractor`, registered as `"language_model_fod_extractor"`) and runs it over that sample's model outputs to produce a frame of discernment.
 - Passes each `FodOutput` to the configured `focal_set` implementation (default: `LanguageModelFocalSetCreator`, registered as `"language_model_focal_set_creator"`).
-- Assigns source masses with the configured BPA assigner and writes `<scenario_id>_frame.json`, `<scenario_id>_focal_sets.json`, and `<scenario_id>_bpa.json`. The extractor, focal-set creator, BPA assigner, and combiner must share an output directory.
+- Assigns source masses with the configured BPA assigner and writes `<scenario_id>/frame.json`, `<scenario_id>/focal_sets.json`, and `<scenario_id>/bpa.json`. The extractor, focal-set creator, BPA assigner, and combiner must share an output directory.
 - Processes one sample by default to limit API usage. Use `--num-samples N` or `--all` to process more.
-- A failed scenario writes `<scenario_id>_error.json` with its stage, error type, and message. Earlier stage outputs are preserved, and later scenarios continue.
+- A failed scenario writes `<scenario_id>/error.json` with its stage, error type, and message. Earlier stage outputs are preserved, and later scenarios continue.
 - At the end, `summary.json` lists scenario outcomes and success/failure counts. The command exits with status 1 if any scenario failed, otherwise 0. Setup errors stop the run; Ctrl+C still interrupts it.
-- Combines the source BPAs using the configured combiner (default: `Dempster`). Writes `<scenario_id>_combined.json` containing `combined_masses` and `conflict`. The combiner makes no LLM calls.
+- Each scenario has its own folder under the run directory. Scenario IDs are URL-encoded (including dots) for safe folder names and must be non-empty and unique within the selected samples. `metadata.json` and `summary.json` remain at the run root.
+- Combines the source BPAs using the configured combiner (default: `Dempster`). Writes `<scenario_id>/combined.json` containing `combined_masses` and `conflict`. The combiner makes no LLM calls.
 
 ## Tests
 
