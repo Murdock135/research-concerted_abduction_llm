@@ -1,0 +1,3 @@
+[combiner]
+type = "Dempster"
+output_dir = "experiments/runs"

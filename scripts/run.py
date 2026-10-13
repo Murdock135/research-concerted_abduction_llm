@@ -12,15 +12,16 @@ abductive-reasoning pipeline:
 Current state:
     This runner loads the most recently generated dataset and executes the
     configured frame-of-discernment extractor, focal-set creator, and BPA
-    assigner. Evidence combination remains to be implemented.
+    assigner, followed by the configured evidence combiner. Scenario failures
+    are logged and the batch continues.
 
 TODO:
     - [x] Refactor frame extraction into concerted_abduction.fod.
     - [x] Integrate focal-set creation.
     - [x] Add configuration-driven component and LLM-provider construction.
     - [x] Implement and integrate mass-function assignment.
-    - [ ] Implement and integrate evidence combination using Dempster's rule.
-    - [ ] Add automated tests for the complete pipeline.
+    - [x] Implement and integrate evidence combination using Dempster's rule.
+    - [x] Add automated tests for the complete pipeline.
 
 The component implementation, language-model provider, model, prompt, input
 directory, and output directory are selected through the project's layered
@@ -41,11 +42,13 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
+from concerted_abduction.combiners import Combiner, CombinerRegistry
 from concerted_abduction.bpa import BpaAssigner, BpaRegistry
 from concerted_abduction.focal_set import FocalSetCreator, FocalSetRegistry
 from concerted_abduction.fod import FodExtractorRegistry, FrameOfDiscernmentExtractor
-from concerted_abduction.types import BpaOutput, DataSet, FocalSetOutput, FodOutput
+from concerted_abduction.types import BpaOutput, CombinedMasses, DataSet, FocalSetOutput, FodOutput
 from concerted_abduction.utils.run_utils import (
     latest_run_dir,
     make_run_dir,
@@ -64,7 +67,7 @@ def positive_int(value: str) -> int:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run FoD extraction, focal-set creation, and BPA assignment."
+        description="Run FoD extraction, focal sets, BPA assignment, and evidence combination."
     )
     sample_group = parser.add_mutually_exclusive_group()
     sample_group.add_argument(
@@ -136,14 +139,29 @@ def create_bpa_assigner(cfg: ComponentConfig) -> BpaAssigner:
     return assigner
 
 
-def save_bpa(run_dir: Path, sample_id: str, result: BpaOutput) -> None:
-    (run_dir / f"{sample_id}_bpa.json").write_text(
+def create_combiner(cfg: ComponentConfig) -> Combiner:
+    """Construct the registered deterministic combiner."""
+    return CombinerRegistry._get(cfg.type)()
+
+
+def save_combined(
+    scenario_dir: Path, masses: CombinedMasses, conflict: float
+) -> None:
+    (scenario_dir / "combined.json").write_text(
+        json.dumps(masses.model_dump(mode="json") | {"conflict": conflict},
+                   ensure_ascii=False, indent=4),
+        encoding="utf-8",
+    )
+
+
+def save_bpa(scenario_dir: Path, result: BpaOutput) -> None:
+    (scenario_dir / "bpa.json").write_text(
         result.model_dump_json(indent=4), encoding="utf-8"
     )
 
 
-def save_frame(run_dir: Path, sample_id: str, result: FodOutput) -> None:
-    output_path = run_dir / f"{sample_id}_frame.json"
+def save_frame(scenario_dir: Path, result: FodOutput) -> None:
+    output_path = scenario_dir / "frame.json"
     output_path.write_text(
         json.dumps(result.model_dump(), ensure_ascii=False, indent=4),
         encoding="utf-8",
@@ -151,9 +169,9 @@ def save_frame(run_dir: Path, sample_id: str, result: FodOutput) -> None:
 
 
 def save_focal_sets(
-    run_dir: Path, sample_id: str, result: FocalSetOutput
+    scenario_dir: Path, result: FocalSetOutput
 ) -> None:
-    output_path = run_dir / f"{sample_id}_focal_sets.json"
+    output_path = scenario_dir / "focal_sets.json"
     output_path.write_text(
         json.dumps(result.model_dump(), ensure_ascii=False, indent=4),
         encoding="utf-8",
@@ -169,10 +187,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     extractor_cfg = settings.fod_extractor
     focal_set_cfg = settings.focal_set
     bpa_cfg = settings.bpa
+    combiner_cfg = settings.combiner
 
-    if len({cfg.output_dir for cfg in (extractor_cfg, focal_set_cfg, bpa_cfg)}) != 1:
+    if len({cfg.output_dir for cfg in (extractor_cfg, focal_set_cfg, bpa_cfg, combiner_cfg)}) != 1:
         raise ValueError(
-            "fod_extractor, focal_set, and bpa output_dir must match so "
+            "fod_extractor, focal_set, bpa, and combiner output_dir must match so "
             "pipeline artifacts are written to the same run directory"
         )
 
@@ -194,7 +213,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     extractor = create_extractor(extractor_cfg)
     focal_set_creator = create_focal_set_creator(focal_set_cfg)
     bpa_assigner = create_bpa_assigner(bpa_cfg)
+    combiner = create_combiner(combiner_cfg)
     samples = dataset.samples if args.all else dataset.samples[: args.num_samples]
+    sample_ids = [sample.scenario_id for sample in samples]
+    if any(not sample_id for sample_id in sample_ids) or len(set(sample_ids)) != len(sample_ids):
+        raise ValueError("Selected scenario IDs must be non-empty and unique")
 
     run_dir = make_run_dir(extractor_cfg.output_dir)
     save_run_metadata(
@@ -213,26 +236,65 @@ def main(argv: Sequence[str] | None = None) -> int:
             "model": focal_set_cfg.llm.model_name if focal_set_cfg.llm else None,
         },
         bpa=bpa_cfg.model_dump(mode="json"),
+        combiner=combiner_cfg.model_dump(mode="json"),
         sample_count=len(samples),
         smoke_test=not args.all,
     )
 
+    outcomes: list[dict[str, str]] = []
     for sample in samples:
-        fod_result = extractor.generate_frame(sample)
-        focal_set_result = focal_set_creator.create_focal_sets(fod_result)
-        save_frame(run_dir, sample.scenario_id, fod_result)
-        save_focal_sets(run_dir, sample.scenario_id, focal_set_result)
-        if focal_set_result.validation_errors:
-            print(
-                f"Warning: {sample.scenario_id} focal sets failed "
-                f"{len(focal_set_result.validation_errors)} validation check(s); "
-                "the result was preserved; continuing to BPA assignment"
+        # Encode IDs as single path components; dots cannot resolve to parent directories.
+        scenario_dir = run_dir / quote(sample.scenario_id, safe="").replace(".", "%2E")
+        scenario_dir.mkdir()
+        stage = "frame"
+        try:
+            fod_result = extractor.generate_frame(sample)
+            save_frame(scenario_dir, fod_result)
+            stage = "focal_sets"
+            focal_set_result = focal_set_creator.create_focal_sets(fod_result)
+            save_focal_sets(scenario_dir, focal_set_result)
+            if focal_set_result.validation_errors:
+                print(
+                    f"Warning: {sample.scenario_id} focal sets failed "
+                    f"{len(focal_set_result.validation_errors)} validation check(s); "
+                    "the result was preserved; continuing to BPA assignment"
+                )
+            stage = "bpa"
+            bpa_result = bpa_assigner.assign_masses(fod_result, focal_set_result)
+            save_bpa(scenario_dir, bpa_result)
+            stage = "combination"
+            masses, conflict = combiner.combine(bpa_result)
+            save_combined(scenario_dir, masses, conflict)
+        except Exception as exc:
+            # Isolate scenario failures; KeyboardInterrupt still stops execution.
+            outcome = {
+                "scenario_id": sample.scenario_id,
+                "status": "failed",
+                "stage": stage,
+                "error_type": type(exc).__name__,
+                "message": str(exc),
+            }
+            (scenario_dir / "error.json").write_text(
+                json.dumps(outcome, ensure_ascii=False, indent=4), encoding="utf-8"
             )
-        bpa_result = bpa_assigner.assign_masses(fod_result, focal_set_result)
-        save_bpa(run_dir, sample.scenario_id, bpa_result)
-        print(f"Processed {sample.scenario_id} -> {run_dir}")
+            print(f"Failed {sample.scenario_id} at {stage}: {exc}; continuing batch")
+        else:
+            outcome = {"scenario_id": sample.scenario_id, "status": "completed"}
+            print(f"Processed {sample.scenario_id} -> {scenario_dir}")
+        outcomes.append(outcome)
 
-    return 0
+    failed = sum(outcome["status"] == "failed" for outcome in outcomes)
+    summary = {
+        "sample_count": len(samples),
+        "completed": len(outcomes) - failed,
+        "failed": failed,
+        "scenarios": outcomes,
+    }
+    (run_dir / "summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=4), encoding="utf-8"
+    )
+    print(f"Completed {summary['completed']} scenario(s); failed {failed} -> {run_dir}")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

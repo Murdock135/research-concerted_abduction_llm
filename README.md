@@ -15,11 +15,9 @@ Early-stage research code. Working today:
 - LLM-based frame-of-discernment (FoD) extraction
 - LLM-based focal-set creation with source-text citations
 
-Not yet implemented:
-
-- Mass function assignment (`src/concerted_abduction/mass_functions/`)
-- Evidence combination via Dempster's rule (`src/concerted_abduction/combiners/`)
-- Mass assignment and evidence combination are not yet integrated into the runner
+- LLM-based source BPA assignment with distribution validation
+- Registry-selected Dempster evidence combination
+- Complete runner with per-scenario error logs and batch summaries
 
 ## Setup
 
@@ -36,8 +34,8 @@ GEMINI_API_KEY=...
 ## Usage
 
 ```bash
-python scripts/generate_data.py       # Generate synthetic dataset via Gemini API -> data/generated_dataset.json
-uv run python scripts/run.py          # Run FoD extraction and focal-set creation
+uv run python scripts/generate_data.py  # Generate a timestamped synthetic dataset
+uv run python scripts/run.py            # Process one scenario through combination
 ```
 
 Run the unit tests with:
@@ -52,15 +50,16 @@ uv run python -m unittest discover -s tests -p 'test_*.py'
 2. **Dataset types** (`src/concerted_abduction/types.py`) — Pydantic models: `DataSample` (one scenario), `ModelOutput` (one model's response), `DataSet` (collection), `OverlapMatrix` (n×n similarity matrix).
 3. **Frame-of-discernment extraction** (`src/concerted_abduction/fod/`) — `FrameOfDiscernmentExtractor` abstract base; `LanguageModelFodExtractor` uses Gemini to read all model outputs and produce a frame of discernment (FoD). `FodExtractorRegistry` lets components be registered and retrieved by name.
 4. **Focal-set creation** (`src/concerted_abduction/focal_set/`) — `LanguageModelFocalSetCreator` derives subsets of the FoD for each source, explains each subset, and cites verbatim supporting excerpts.
-5. **Planned:** mass function assignment and evidence combiners.
+5. **Mass assignment** (`src/concerted_abduction/bpa/`) — assigns and validates source masses.
+6. **Evidence combination** (`src/concerted_abduction/combiners/`) — combines source BPAs and returns normalized masses plus conflict.
 
 ## Project layout
 
 ```
-src/concerted_abduction/  Core library (types, fod, focal_set, data_utils, mass_functions, combiners)
+src/concerted_abduction/  Core library (types, fod, focal_set, data_utils, bpa, combiners)
 prompts/                  Prompt templates, loaded via load_prompt()
 data/                     Example data and generated datasets
-scripts/                  Runnable entry points (generate_data.py, pipeline_prototype.py)
+scripts/                  Runnable entry points (generate_data.py, run.py)
 integrations/             LLM provider integrations (gemini, langchain, openai)
 config/                   Project configuration (settings.py)
 docs/                     Reference notes
@@ -79,6 +78,6 @@ notebooks/                Scratch notebooks
 
 ## Roadmap
 
-- Implement mass function assignment (`mass_functions/`)
-- Implement evidence combiners (`combiners/`)
-- Integrate mass assignment and evidence combination into the runner
+The prototype pipeline is implemented through combined masses. Research evaluation,
+BPA calibration, and treatment of source dependence remain open. See
+[docs/roadmap.md](docs/roadmap.md).

@@ -34,3 +34,7 @@ output_dir = "experiments/runs"
 [bpa.llm]
 provider = "google_genai"
 model = "gemini-2.5-flash"
+
+[combiner]
+type = "Dempster"
+output_dir = "experiments/runs"

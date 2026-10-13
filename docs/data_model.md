@@ -81,8 +81,32 @@ Note: the example file uses `id`, but the live `DataSample` schema field is `sce
 | `data/synthetic/examples/common_input/v0.json` | Few-shot examples fed to the data generator's prompt |
 | `<data_generator.output_dir>/<run>/generated_dataset.json` | Output of `scripts/generate_data.py` |
 | `data/synthetic/generated/common_input/v0.json` | An earlier/alternate generated dataset |
-| `<fod_extractor.output_dir>/<run>/<scenario_id>_frame.json` | Structured FoD-extraction output, one file per scenario |
-| `<fod_extractor.output_dir>/<run>/<scenario_id>_focal_sets.json` | Cited focal sets grouped by source, one file per scenario |
+| `<fod_extractor.output_dir>/<run>/<scenario_id>/frame.json` | Structured FoD-extraction output, one file per scenario |
+| `<fod_extractor.output_dir>/<run>/<scenario_id>/focal_sets.json` | Cited focal sets grouped by source, one file per scenario |
+| `<bpa.output_dir>/<run>/<scenario_id>/bpa.json` | Validated per-source mass assignments |
+| `<combiner.output_dir>/<run>/<scenario_id>/combined.json` | Combined masses and conflict |
+| `<combiner.output_dir>/<run>/<scenario_id>/error.json` | Stage, error type, and message for a failed scenario |
+| `<combiner.output_dir>/<run>/summary.json` | Batch outcomes and counts |
+
+## BPA and combined evidence
+
+`FocalSetMass` contains `hypotheses`, `mass`, and `justification`. `SourceBpa`
+groups masses by source and validates duplicate subsets and a total of one
+(tolerance `1e-6`). `BpaOutput` contains unique source BPAs.
+
+`CombinedMasses` contains `combined_masses`, a list of `CombinedMass` entries.
+Dempster populates each entry's `focal_set` and `combined_mass`, and returns
+conflict separately as the second tuple member. The runner writes both to JSON:
+
+```json
+{
+  "combined_masses": [{"focal_set": ["hypothesis"], "combined_mass": 1.0, "k": null}],
+  "conflict": 0.0
+}
+```
+
+The existing `CombinedMass.k` field is an alternative mass field; the Dempster
+result uses `combined_mass`. Conflict is saved once at the top level.
 
 ---
 Next: [configuration.md](configuration.md) — how to control which LLM/prompt/examples each component uses.

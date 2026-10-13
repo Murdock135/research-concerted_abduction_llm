@@ -22,8 +22,8 @@
 │   │   │   ├── base.py               FocalSetCreator ABC
 │   │   │   ├── registry.py           FocalSetRegistry
 │   │   │   └── llm.py                LanguageModelFocalSetCreator
-│   │   ├── mass_functions/          EMPTY — planned, see roadmap.md
-│   │   ├── combiners/               EMPTY — planned, see roadmap.md
+│   │   ├── bpa/                     Source mass assignment (base, registry, llm)
+│   │   ├── combiners/               Evidence combination (base, registry, dempster)
 │   │   ├── core/                    EMPTY
 │   │   └── utils/
 │   │       └── utils.py              find_project_root(), load_prompt()
@@ -34,12 +34,13 @@
 ├── scripts/
 │   ├── generate_data.py            Entry point: generate synthetic dataset in a timestamped run
 │   ├── pipeline_prototype.py       Earlier pipeline prototype
-│   └── run.py                      Entry point: FoD extraction then focal-set creation
+│   └── run.py                      Entry point: extraction through evidence combination
 │
 ├── prompts/                        System prompts for LLM-driven components
 │   ├── data_generators/common_input/v0.txt
 │   ├── fod/v0.txt
-│   └── focal_set/v0.txt
+│   ├── focal_set/v0.txt
+│   └── bpa/v0.txt
 │
 ├── data/
 │   └── synthetic/
@@ -47,7 +48,7 @@
 │       └── generated/common_input/<run>/    Timestamped outputs of scripts/generate_data.py
 │
 ├── experiments/
-│   └── runs/                       Timestamped pipeline runs with one <scenario_id>_frame.json per sample
+│   └── runs/                       Timestamped pipeline stage artifacts, errors, metadata, and summary
 │
 ├── integrations/                   Root-level (NOT under src/) — gemini.py, langchain.py, openai.py
 │                                    all currently empty stub files, unused

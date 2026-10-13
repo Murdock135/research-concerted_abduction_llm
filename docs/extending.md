@@ -1,6 +1,6 @@
 # Extending: the registry pattern
 
-The pluggable component types (data generators, FoD extractors, and focal-set creators) follow the same pattern: an abstract base class, a decorator-based registry, and lookup by string name from `config.toml`.
+The pluggable component types (data generators, FoD extractors, focal-set creators, BPA assigners, and combiners) follow the same pattern: an abstract base class, a decorator-based registry, and lookup by string name from `config.toml`.
 
 ## Anatomy
 
@@ -48,9 +48,21 @@ Same steps, but subclass `FrameOfDiscernmentExtractor` and implement `generate_f
 
 Subclass `FocalSetCreator`, implement `create_focal_sets(self, fod_output)`, and decorate the implementation with `@FocalSetRegistry.register("your_name")`. The result must be a `FocalSetOutput`; implementations should preserve source attribution and ensure every cited excerpt comes from its corresponding source text.
 
-## Mass functions and combiners (not yet started)
+## Adding a BPA assigner
 
-`src/concerted_abduction/mass_functions/` and `src/concerted_abduction/combiners/` are empty packages. When implementing them, following the same base-class + registry + `ComponentConfig` pattern used above would keep the pipeline consistent — a `mass_functions` and `combiners` section would need to be added to `ConcertedAbductionSettings` in `src/config/settings.py`, plus corresponding entries in `default_config.toml`.
+Subclass `BpaAssigner`, implement `assign_masses(fod_output, focal_set_output)`
+returning `BpaOutput`, register with `BpaRegistry`, and provide a
+`from_config(cfg)` constructor. Import the implementation in `bpa/__init__.py`
+and select it under `[bpa]`.
+
+## Adding a combiner
+
+Subclass `Combiner` and implement `combine(bpa_assignments)` returning
+`tuple[CombinedMasses, float]` (combined masses, then conflict mass). Register it
+with `@CombinerRegistry.register("your_method")`, import it in
+`combiners/__init__.py`, and set `[combiner] type = "your_method"`.
+The runner constructs combiners without arguments. All pipeline analysis stages
+must use the same `output_dir`. Keep method-specific arithmetic in the implementation.
 
 ---
 Next: [project_structure.md](project_structure.md) — a full annotated file tree, for reference while you work.

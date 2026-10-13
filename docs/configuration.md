@@ -18,14 +18,14 @@ Every script that calls the Gemini API constructs `ENVSettings()` first and rais
 
 ## `ConcertedAbductionSettings`
 
-The main settings object. Three top-level sections currently, one per implemented pipeline component:
+The main settings object has five top-level component sections:
 
 ```toml
 [data_generator]
 type = "common_input"
 prompt_path = "prompts/data_generators/common_input/v0.txt"
 examples_path = "data/synthetic/examples/common_input/v0.json"
-output_dir = "data"
+output_dir = "data/synthetic/generated/common_input/"
 
 [data_generator.llm]
 provider = "google_genai"
@@ -48,9 +48,24 @@ output_dir = "experiments/runs"
 [focal_set.llm]
 provider = "google_genai"
 model = "gemini-2.5-flash"
+
+[bpa]
+type = "language_model_bpa_assigner"
+prompt_path = "prompts/bpa/v0.txt"
+output_dir = "experiments/runs"
+
+[bpa.llm]
+provider = "google_genai"
+model = "gemini-2.5-flash"
+
+[combiner]
+type = "Dempster"
+output_dir = "experiments/runs"
 ```
 
-This is the content of `src/config/default_config.toml`. `fod_extractor` has no `examples_path` set by default.
+These are the bundled defaults. The combiner requires no LLM, prompt, or examples.
+The extractor, focal-set creator, BPA assigner, and combiner output directories
+must match. Override `[combiner].type` to select another registered implementation.
 
 ### `ComponentConfig` fields
 
@@ -85,6 +100,8 @@ settings = ConcertedAbductionSettings()
 gen_cfg = settings.data_generator
 extractor_cfg = settings.fod_extractor
 focal_set_cfg = settings.focal_set
+bpa_cfg = settings.bpa
+combiner_cfg = settings.combiner
 ```
 
 ---
