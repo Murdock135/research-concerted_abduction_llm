@@ -22,7 +22,7 @@ Default implementation — `CommonInputDataGenerator` (`data_generator.py`), reg
 
 - Loads a system prompt (`prompts/data_generators/common_input/v0.txt`) and a set of few-shot example scenarios (`data/synthetic/examples/common_input/v0.json`), and appends the examples to the prompt.
 - Calls the Gemini API with `response_mime_type="application/json"` and `response_json_schema=DataSet.model_json_schema()`, so the model is constrained to emit valid `DataSet` JSON directly.
-- Given a natural-language instruction (e.g. "Generate 5 data samples in a medical diagnosis scenario for 3 models with overlap matrix [...]"), it returns a `DataSet` of synthetic scenarios where 3 named models ("A", "B", "C") each give a differentiated response to the same input.
+- Given a natural-language instruction (e.g. "Generate 5 synthetic medical diagnosis samples with varying degrees of overlap"), it returns a `DataSet` of synthetic scenarios with differentiated responses to the same input. Ordinary samples use first-person symptom messages and natural-language model responses; explicitly requested belief-theory examples preserve supplied belief assignments. Overlap is requested qualitatively and is not measured or enforced by the generator.
 
 Driven by `scripts/generate_data.py`, which resolves whichever generator is configured and writes the result to a timestamped directory under the configured output directory.
 

@@ -7,14 +7,13 @@ from concerted_abduction.data_utils import DataGeneratorRegistry
 from concerted_abduction.utils.run_utils import make_run_dir, save_run_metadata
 from config.settings import ENVSettings, ConcertedAbductionSettings
 
-GENERATION_PROMPT = """Generate 5 synthetic medical diagnosis data samples.
 
-For 4 samples, use 3 models with the following overlap matrix:
-[[1.0, 0.5, 0.2], [0.5, 1.0, 0.3], [0.2, 0.3, 1.0]].
+GENERATION_PROMPT = """Generate 5 synthetic medical diagnosis data samples. Generate each sample with
+varying degrees of overlap so we can test a datafusion or evidence fusion pipeline downstream.
 
 Include Zadeh's classic counterexample as the remaining sample, with id
 "zadeh_classic". This sample must have exactly 2 sources, Doctor A and Doctor B,
-rather than 3 models; the overlap matrix above does not apply to this sample.
+rather than 3 models.
 Use the mutually exclusive, exhaustive frame {meningitis, concussion, brain tumor}.
 Doctor A assigns basic belief masses m({meningitis}) = 0.99 and
 m({brain tumor}) = 0.01. Doctor B assigns m({concussion}) = 0.99 and

@@ -5,22 +5,12 @@ You are a helpful assistant that generates natural language data samples for tra
     language models.
 
     Nature of each sample:
-    The human provides an input message that implies a mystery or an uncertain situation that the language models need to reason about. 
-    For example, it could be a medical diagnosis or differential diagnosis scenario (Example provided at the end). Then, 
+    The input is a simulated human message that implies a mystery or an uncertain situation that the language models need to reason about.
+    Write each ordinary sample's input_message as a natural, first-person message from someone asking an LLM about their symptoms, rather than a third-person clinical case summary.
+    For example, it could be a medical diagnosis or differential diagnosis scenario (Example provided at the end). Then, "I have been experiencing severe headaches and dizziness for the past week, and I am not sure what could be causing it. Can you help me figure out what might be going on?"
     each language model provides a response to the input message, which may include different hypotheses or interpretations of the situation.
-    Each language model's response should have some overlap in their hypotheses but may also contain unique elements or interpretations to reflect different reasoning paths.
+    Each language model's response should have some overlap in its hypotheses but may also contain unique elements or interpretations to reflect different reasoning paths. For ordinary samples, simulate realistic responses to people prompting an LLM: use natural language without belief masses, explicit belief-theory constructs, or technical jargon about belief theory. For explicitly requested belief-theory examples, preserve the supplied belief assignments.
 
-    You will be provided a scenario description for each sample and an overlap matrix that specifies the degree of overlap of evidence between the outputs of different models for that scenario.
+    You will be provided a scenario description for each sample.
     
-    Each sample should be a dictionary with the following keys:
-    - id (str): A unique identifier
-    - created_at (str): The creation timestamp of the sample. Format: YYYY-MM-DDTHH:MM:SSZ
-    - input_message (str): The input text for the model to process
-    - outputs (list[dict]): A list of model responses, each containing:
-        - source (str): The name of the source e.g. "doctor A", "web MD", "gemini 3.5", etc.
-        - response (str): The model's response to the input_message
-
-    You will be provided an overlap matrix representing the similarity or overlap between the outputs of different models for the same input message. 
-    The overlap matrix is a square matrix of size `n_models x n_models`, where each entry `(i, j)` indicates the degree of overlap between the outputs of model `i` and model `j`.
-
-    Example:
+Examples of samples:

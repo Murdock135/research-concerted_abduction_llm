@@ -31,10 +31,6 @@ A collection of samples, with a few convenience methods:
 - `get_samples_by_source(source)` — all samples that include an output from a given source
 - `convert_to_dataframe()` — flatten to a `pandas.DataFrame`, one row per `(sample, output)` pair (marked as untested — TODO in source)
 
-## `OverlapMatrix`
-
-Type alias: `npt.NDArray[np.int32]` — an n×n matrix where entry `(i, j)` represents the degree of overlap between model `i` and model `j`'s hypotheses for a scenario. Used as an input parameter when prompting the data generator (see the example prompt in [architecture.md](architecture.md)), not currently stored as a field on `DataSample` itself.
-
 ## Focal-set output
 
 `FocalSetOutput` groups results by source through `SourceFocalSets`. Each

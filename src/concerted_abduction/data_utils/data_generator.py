@@ -29,10 +29,6 @@ class CommonInputDataGenerator(DataGenerator):
         self.system_prompt = self.system_prompt + "\n" + json.dumps(self.examples)
 
     def generate_data(self, prompt: str) -> DataSet:
-        """
-        Example prompt:
-        "Generate 5 data samples in a medical diagnosis scenario for 3 models with the following overlap matrix: [[1.0, 0.5, 0.2], [0.5, 1.0, 0.3], [0.2, 0.3, 1.0]]"
-        """
         client = genai.Client()
         response = client.models.generate_content(
             model=self.language_model,

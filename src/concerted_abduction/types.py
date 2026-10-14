@@ -7,9 +7,6 @@ import pandas as pd
 import numpy as np
 import numpy.typing as npt
 
-# Type alias for overlap matrix representing the similarity/overlap between model outputs
-OverlapMatrix = npt.NDArray[np.int32]
-
 type MassFunction = dict[frozenset[str], float]
 
 class ModelOutput(BaseModel):

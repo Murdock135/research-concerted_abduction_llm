@@ -9,7 +9,7 @@
 │
 ├── src/
 │   ├── concerted_abduction/        Main package
-│   │   ├── types.py                 Pydantic dataset schema: ModelOutput, DataSample, DataSet, OverlapMatrix
+│   │   ├── types.py                 Pydantic dataset schema: ModelOutput, DataSample, DataSet
 │   │   ├── data_utils/              Data generation component
 │   │   │   ├── base.py               DataGenerator ABC
 │   │   │   ├── registry.py           DataGeneratorRegistry
