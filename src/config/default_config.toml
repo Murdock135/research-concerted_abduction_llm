@@ -6,7 +6,7 @@ output_dir = "data/synthetic/generated/common_input/"
 
 [data_generator.llm]
 provider = "google_genai"
-model = "gemini-2.5-flash"
+model = "gemini-3.8-flash"
 
 [fod_extractor]
 type = "language_model_fod_extractor"
@@ -15,7 +15,7 @@ output_dir = "experiments/runs"
 
 [fod_extractor.llm]
 provider = "google_genai"
-model = "gemini-2.5-flash"
+model = "gemini-3.8-flash"
 
 [focal_set]
 type = "language_model_focal_set_creator"
@@ -24,7 +24,7 @@ output_dir = "experiments/runs"
 
 [focal_set.llm]
 provider = "google_genai"
-model = "gemini-2.5-flash"
+model = "gemini-3.8-flash"
 
 [bpa]
 type = "language_model_bpa_assigner"
@@ -33,7 +33,7 @@ output_dir = "experiments/runs"
 
 [bpa.llm]
 provider = "google_genai"
-model = "gemini-2.5-flash"
+model = "gemini-3.8-flash"
 
 [combiner]
 type = "Dempster"
