@@ -13,4 +13,9 @@ You are a helpful assistant that generates natural language data samples for tra
 
     You will be provided a scenario description for each sample.
     
+Return a single JSON object matching the provided dataset schema.
+Put the generated samples in "samples". Put a brief summary of what you
+generated, any issues encountered, and any limitations in "report".
+Do not include text outside the JSON object.
+
 Examples of samples:

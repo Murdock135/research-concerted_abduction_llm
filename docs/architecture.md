@@ -24,7 +24,7 @@ Default implementation — `CommonInputDataGenerator` (`data_generator.py`), reg
 - Calls the Gemini API with `response_mime_type="application/json"` and `response_json_schema=DataSet.model_json_schema()`, so the model is constrained to emit valid `DataSet` JSON directly.
 - Given a natural-language instruction (e.g. "Generate 5 synthetic medical diagnosis samples with varying degrees of overlap"), it returns a `DataSet` of synthetic scenarios with differentiated responses to the same input. Ordinary samples use first-person symptom messages and natural-language model responses; explicitly requested belief-theory examples preserve supplied belief assignments. Overlap is requested qualitatively and is not measured or enforced by the generator.
 
-Driven by `scripts/generate_data.py`, which resolves whichever generator is configured and writes the result to a timestamped directory under the configured output directory.
+Driven by `scripts/generate_data.py`, which resolves whichever generator is configured and writes the result, including the optional generation report, to a timestamped directory under the configured output directory. The script prints the saved path and the report when present.
 
 ## 2. Frame-of-discernment extraction
 

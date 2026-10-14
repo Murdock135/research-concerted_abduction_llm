@@ -48,7 +48,6 @@ def main():
     )
 
     dataset = generator.generate_data(prompt=GENERATION_PROMPT)
-    print("Generated Dataset:\n", dataset)
 
     # Dump the generated dataset to a JSON file
     run_dir = make_run_dir(cfg.output_dir)
@@ -56,6 +55,9 @@ def main():
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(dataset.model_dump(), f, ensure_ascii=False, indent=4)
     print(f"Generated dataset saved to {output_path}")
+
+    if dataset.report:
+        print(dataset.report)
 
     save_run_metadata(
         run_dir,

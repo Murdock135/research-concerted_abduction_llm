@@ -21,6 +21,7 @@ class DataSample(BaseModel):
 
 class DataSet(BaseModel):
     samples: list[DataSample] = Field(..., description="List of data samples in the dataset")
+    report: str | None = Field(None, description="Summary of generated samples, issues encountered, and limitations.")
 
     def add_sample(self, sample: DataSample) -> None:
         self.samples.append(sample)

@@ -24,7 +24,14 @@ One scenario: a single input message and the set of model responses to it.
 
 ## `DataSet`
 
-A collection of samples, with a few convenience methods:
+A collection of samples with an optional generation report:
+
+| field | type | description |
+|---|---|---|
+| `samples` | `list[DataSample]` | Generated scenarios |
+| `report` | `str \| None` | Summary of generated samples, issues, and limitations; defaults to `None` for datasets without a report |
+
+Convenience methods:
 
 - `add_sample(sample)` — append a `DataSample`
 - `get_sample_by_id(scenario_id)` — lookup by id, or `None`
