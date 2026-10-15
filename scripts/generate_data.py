@@ -8,8 +8,10 @@ from concerted_abduction.utils.run_utils import make_run_dir, save_run_metadata
 from config.settings import ENVSettings, ConcertedAbductionSettings
 
 
-GENERATION_PROMPT = """Generate 5 synthetic medical diagnosis data samples. Generate each sample with
-varying degrees of overlap so we can test a datafusion or evidence fusion pipeline downstream.
+GENERATION_PROMPT = """Generate many (10-20) synthetic medical diagnosis data samples. Generate samples with
+varying degrees of overlap so we can test a data fusion or evidence fusion pipeline downstream. For each 
+degree of overlap, generate a few samples. Make sure the dataset has a balanced number of each type of 
+sample.
 
 Include Zadeh's classic counterexample as the remaining sample, with id
 "zadeh_classic". This sample must have exactly 2 sources, Doctor A and Doctor B,
