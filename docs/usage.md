@@ -37,6 +37,43 @@ uv run python scripts/run.py --all
 - Each scenario has its own folder under the run directory. Scenario IDs are URL-encoded (including dots) for safe folder names and must be non-empty and unique within the selected samples. `metadata.json` and `summary.json` remain at the run root.
 - Combines the source BPAs using the configured combiner (default: `Dempster`). Writes `<scenario_id>/combined.json` containing `combined_masses` and `conflict`. The combiner makes no LLM calls.
 
+## Demonstrate the process
+
+```bash
+uv run python scripts/demo.py --pause
+```
+
+The demo picks a random sample from the latest generated synthetic dataset on each run, then
+uses the configured LM components to extract the frame, extract cited focal sets, and assign belief
+masses. The configured combiner produces combined masses and conflict. Each stage
+prints its inputs and presents outputs in Rich tables, wrapping long text to fit
+the terminal, aligning masses, and highlighting conflict in red;
+`--pause` waits for Enter between stages. Omit it
+to run continuously. Live results may differ from the illustrative diagram.
+Artifacts are saved after each stage in a unique folder under
+`<bpa.output_dir>/demos/`. The source dataset path and scenario ID are printed and
+recorded in the run metadata. Use `--no-random` to select the first sample,
+`--scenario-id` to select a specific sample (overriding random selection), or
+`--dataset` to select a specific generated dataset. Random selection can repeat
+a sample across runs; replay always uses the saved scenario.
+
+```bash
+uv run python scripts/demo.py --no-random --pause
+uv run python scripts/demo.py --scenario-id sample_high_02 --pause
+uv run python scripts/demo.py --dataset data/synthetic/generated/common_input/14_10_2026-20_34_49/generated_dataset.json --scenario-id sample_high_01
+```
+
+For a presentation without API calls, replay a completed scenario folder:
+
+```bash
+uv run python scripts/demo.py --replay experiments/runs/13_10_2026-18_35_12/1 --pause
+```
+
+Replay reads `frame.json`, `focal_sets.json`, and `bpa.json`, displays those saved
+LM outputs, and recomputes the result using Dempster's rule. It does not modify
+the saved files. Demo folders also include `input.json` so the original question
+can be displayed on replay; older scenario folders may lack it.
+
 ## Tests
 
 ```bash

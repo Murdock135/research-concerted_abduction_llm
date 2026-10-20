@@ -44,11 +44,17 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from concerted_abduction.combiners import Combiner, CombinerRegistry
 from concerted_abduction.bpa import BpaAssigner, BpaRegistry
+from concerted_abduction.combiners import Combiner, CombinerRegistry
 from concerted_abduction.focal_set import FocalSetCreator, FocalSetRegistry
 from concerted_abduction.fod import FodExtractorRegistry, FrameOfDiscernmentExtractor
-from concerted_abduction.types import BpaOutput, CombinedMasses, DataSet, FocalSetOutput, FodOutput
+from concerted_abduction.types import (
+    BpaOutput,
+    CombinedMasses,
+    DataSet,
+    FocalSetOutput,
+    FodOutput,
+)
 from concerted_abduction.utils.run_utils import (
     latest_run_dir,
     make_run_dir,
