@@ -134,9 +134,9 @@ An LM reads all the responses and extracts a *frame of discernment*: the common 
 
 For this example:
 
-\[
+$$
 \Theta=\{\text{flu},\text{COVID}\}
-\]
+$$
 
 The prompt asks it to merge synonyms, use canonical labels, and produce elementary, mutually exclusive hypotheses.
 
@@ -160,15 +160,15 @@ The BPA assigner makes a separate LM call for each source. It assigns weights to
 
 An illustrative assignment could be:
 
-\[
+$$
 m_A(\{\text{flu}\})=0.7
-\]
+$$
 
-\[
+$$
 m_A(\{\text{flu},\text{COVID}\})=0.3
-\]
+$$
 
-Here, \(m_A(S)\) means the mass source A commits to the set \(S\). The second value preserves unresolved uncertainty; it is not automatically split between flu and COVID.
+Here, $m_A(S)$ means the mass source A commits to the set $S$. The second value preserves unresolved uncertainty; it is not automatically split between flu and COVID.
 
 Python requires valid subsets, finite masses between zero and one, no duplicate subsets, and a total of one per source. **The weights themselves are LM estimates, not calibrated probabilities.**
 
@@ -181,14 +181,14 @@ For two sources, it multiplies the masses assigned to each pair of focal sets an
 - `{flu}` intersected with `{flu, COVID}` contributes support to `{flu}`.
 - `{flu}` intersected with `{COVID}` has an empty intersection and contributes to conflict.
 
-Calling the total conflicting mass \(K\), Dempster’s rule normalizes the remaining contributions:
+Calling the total conflicting mass $K$, Dempster’s rule normalizes the remaining contributions:
 
-\[
+$$
 m(S)=
 \frac{\sum_{A\cap B=S}m_1(A)m_2(B)}
 {1-K},
 \qquad S\ne\varnothing
-\]
+$$
 
 The implementation extends this across all sources, preserving composite sets. Total conflict causes an error because normalization is undefined.
 
