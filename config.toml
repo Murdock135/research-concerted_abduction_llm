@@ -1,3 +1,15 @@
+[data_generator.llm]
+model = "gemini-4-argon"
+
+[fod_extractor.llm]
+model = "gemini-4-argon"
+
+[focal_set.llm]
+model = "gemini-4-argon"
+
+[bpa.llm]
+model = "gemini-4-argon"
+
 [combiner]
 type = "Dempster"
 output_dir = "experiments/runs"
