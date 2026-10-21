@@ -1,0 +1,44 @@
+flowchart LR
+    Q["Hi LM, I have headache, I'm tired and thirsty. I've done x y z tests ..."]
+
+    A["LM 1<br/>“Flu seems likely, though<br/>COVID is still possible.”"]
+    B["LM 2<br/>“COVID seems more likely,<br/>but flu cannot be ruled out.”"]
+
+    Q --> A
+    Q --> B
+
+    subgraph INTERPRET[" "]
+        H["Frame of discernment<br/>{Flu, COVID}"]
+        F["Extract focal sets<br/>A supports: {Flu}, {Flu, COVID}<br/>B supports: {COVID}, {Flu, COVID}"]
+        MA["Assign belief masses · A<br/>80% → Flu<br/>20% → Flu OR COVID"]
+        MB["Assign belief masses · B<br/>50% → COVID<br/>50% → Flu OR COVID"]
+
+        H --> F
+        F --> MA
+        F --> MB
+    end
+
+    A --> H
+    B --> H
+
+    subgraph FUSE["DST · Combine the evidence"]
+        C["Apply Dempster’s rule"]
+        R["Combined masses<br/>66.7% → Flu<br/>16.7% → COVID<br/>16.7% → Flu OR COVID"]
+        K["Conflict: 40%"]
+
+        C --> R
+        C --> K
+    end
+
+    MA --> C
+    MB --> C
+
+    classDef source fill:#F1F5F9,stroke:#64748B,color:#0F172A
+    classDef llm fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A
+    classDef dst fill:#D1FAE5,stroke:#10B981,color:#064E3B
+    classDef conflict fill:#FEE2E2,stroke:#DC2626,color:#B91C1C
+
+    class Q,A,B source
+    class H,F,MA,MB llm
+    class C,R dst
+    class K conflict

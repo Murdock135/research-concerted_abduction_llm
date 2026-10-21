@@ -1,0 +1,59 @@
+flowchart TB
+    subgraph DATA_IO["Experiment preparation · Generate synthetic data"]
+        direction LR
+        GI["Generation instructions<br/>Create a symptom question<br/>and contrasting responses"]
+        GP["LM"]
+        GO["Question + responses<br/>A: Flu likely; COVID possible<br/>B: COVID likely; flu possible"]
+        GI --> GP --> GO
+    end
+
+    subgraph PIPELINE["Concerted Abduction pipeline"]
+        direction TB
+        subgraph FRAME_IO["1 · Extract frame of discernment"]
+            direction LR
+            HI["All expert opinions:<br/>A's text + B's text"]
+            HP["LM"]
+            HO["Frame of discernment<br/>{Flu, COVID}"]
+            HI --> HP --> HO
+        end
+
+        subgraph FOCAL_IO["2 · Extract focal sets"]
+            direction LR
+            FI["Frame of discernment<br/>+ all source responses"]
+            FP["LM"]
+            FO["Focal sets for each source<br/>A: {Flu}, {Flu, COVID}<br/>B: {COVID}, {Flu, COVID}<br/>Each with justification + source excerpts"]
+            FI --> FP --> FO
+        end
+
+        subgraph MASS_IO["3 · Assign belief masses"]
+            direction LR
+            MI["For each source separately:<br/>Its response + its focal sets<br/>+ the shared frame"]
+            MP["LM"]
+            MO["One mass function per source<br/>A: {Flu} 0.80; {Flu, COVID} 0.20<br/>B: {COVID} 0.50; {Flu, COVID} 0.50"]
+            MI --> MP --> MO
+        end
+
+        subgraph DST_IO["4 · Combine evidence"]
+            direction LR
+            DI["All source mass functions<br/>A's masses + B's masses"]
+            DP["DST · Dempster's rule<br/>Fuse evidence and quantify conflict"]
+            DO["Combined masses<br/>{Flu}: 66.7%<br/>{COVID}: 16.7%<br/>{Flu, COVID}: 16.7%"]
+            DK["Conflict: 40%"]
+            DI --> DP --> DO
+            DP --> DK
+        end
+
+        FRAME_IO --> FOCAL_IO --> MASS_IO --> DST_IO
+    end
+
+    GO -->|Source responses| HI
+
+    classDef data fill:#F1F5F9,stroke:#64748B,color:#0F172A
+    classDef llm fill:#DBEAFE,stroke:#3B82F6,color:#1E3A8A
+    classDef dst fill:#D1FAE5,stroke:#10B981,color:#064E3B
+    classDef conflict fill:#FEE2E2,stroke:#DC2626,color:#B91C1C
+
+    class GI,GO,HI,HO,FI,FO,MI,MO,DI data
+    class GP,HP,FP,MP llm
+    class DP,DO dst
+    class DK conflict
