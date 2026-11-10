@@ -1,0 +1,34 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx} % Required for inserting images
+
+\title{DST-LLM: A language model based evidence combination library}
+\author{
+    \IEEEauthorblockN{Qazi Zarif Ul Islam}
+    \IEEEauthorblockA{
+        Department of EECS\\
+        University of Missouri-columbia\\
+        Columbia, Missouri\\
+        qazi.islam@missouri.edu
+    }
+    \and
+    \IEEEauthorblockN{Derek Anderson}
+    \IEEEauthorblockA{
+        Department of EECS\\
+        University of Missouri-columbia\\
+        Columbia, Missouri\\
+        andersondt@missouri.edu
+    }
+}
+\date{October 2026}
+
+\begin{document}
+
+\maketitle
+
+
+\begin{abstract}
+    Dempster–Shafer theory (DST) provides a formal framework for combining uncertain evidence, but applying it to natural-language sources requires representing their information as hypotheses, focal sets, and mass functions. We present DST-LLM, a modular research library that uses language models to automate this formalization. Given multiple source responses, the library constructs a shared frame of discernment and identifies source-specific focal sets linked to text excerpts. When sources explicitly provide mass functions, language models extract these assignments for direct use; otherwise, language models assign masses based on the source responses. The library then applies Dempster’s rule to compute a combined mass function and report the associated conflict mass. When the sources are themselves language models, this workflow supports belief-function-based ensembling, providing measures of uncertainty over a shared language-model hypothesis space with explicit representations of each model’s support and the resulting combined evidence.. Configurable components, structural and numerical validation, and saved intermediate outputs support inspection and experimentation across pipeline stages. We use a dataset of synthetic medical diagnosis scenarios to illustrate the workflow. The library supports research into automated belief-function extraction and construction and belief-theory based language model ensembling.
+\end{abstract}
+\section{Introduction}
+
+\end{document}
